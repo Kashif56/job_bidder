@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FiMail, FiLock, FiUser, FiUserPlus } from 'react-icons/fi';
 
@@ -8,6 +8,7 @@ import FormInput from '../../components/auth/FormInput';
 import AuthButton from '../../components/auth/AuthButton';
 
 const Signup = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -52,6 +53,9 @@ const Signup = () => {
       
       // Handle successful registration (e.g., store token, redirect)
       console.log('Registration successful', formData);
+      
+      // Redirect to email verification page
+      navigate('/verify-email', { state: { email: formData.email } });
       
       // Reset form
       setFormData({
