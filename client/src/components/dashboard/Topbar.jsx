@@ -1,10 +1,16 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FiBell, FiMenu, FiSearch, FiHelpCircle, FiSettings } from 'react-icons/fi';
+import { useSelector } from 'react-redux';
 
 const Topbar = ({ toggleSidebar }) => {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const { user, isAuthenticated } = useSelector((state) => state.auth);
+
+  const credits = 0;
+
+
 
   const toggleNotifications = () => {
     setNotificationsOpen(!notificationsOpen);
@@ -49,7 +55,7 @@ const Topbar = ({ toggleSidebar }) => {
             {/* Credits display */}
             <div className="hidden md:block">
               <div className="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-sm font-medium">
-                25 Credits
+                {credits} Credits
               </div>
             </div>
 
@@ -109,7 +115,7 @@ const Topbar = ({ toggleSidebar }) => {
                 className="flex items-center max-w-xs text-sm rounded-full focus:outline-none"
               >
                 <div className="h-8 w-8 rounded-full bg-emerald-500 flex items-center justify-center text-white">
-                  <span className="font-medium">U</span>
+                  <span className="font-medium">{user.username.charAt(0).toUpperCase()}</span>
                 </div>
               </button>
 
@@ -137,7 +143,7 @@ const Topbar = ({ toggleSidebar }) => {
                     </Link>
                     <div className="border-t border-gray-100"></div>
                     <button
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="block w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-gray-100"
                       onClick={() => console.log('Logout clicked')}
                     >
                       Sign out

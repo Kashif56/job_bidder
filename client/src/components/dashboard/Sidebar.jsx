@@ -13,9 +13,15 @@ import {
   FiList
 } from 'react-icons/fi';
 
+import { useSelector } from 'react-redux';
+
+
+
 const Sidebar = ({ isOpen, toggleSidebar }) => {
   const location = useLocation();
   const [proposalsOpen, setProposalsOpen] = useState(false);
+  const { user } = useSelector((state) => state.auth);
+  const credits = user?.credits;
 
   // Navigation items with nested structure
   const navItems = [
@@ -177,13 +183,13 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white">
-                <span className="text-sm font-medium">U</span>
+                <span className="text-sm font-medium">{user.username.charAt(0).toUpperCase()}</span>
               </div>
             </div>
             {isOpen && (
               <div className="ml-3">
-                <p className="text-sm font-medium text-gray-700">User Name</p>
-                <p className="text-xs text-gray-500">Credits: 25</p>
+                <p className="text-sm font-medium text-gray-700">{user.username}</p>
+                <p className="text-xs text-gray-500">Credits: {credits || 0}</p>
               </div>
             )}
           </div>
