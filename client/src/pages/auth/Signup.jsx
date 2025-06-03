@@ -7,13 +7,20 @@ import AuthLayout from '../../components/auth/AuthLayout';
 import FormInput from '../../components/auth/FormInput';
 import AuthButton from '../../components/auth/AuthButton';
 
+import { register } from '../../redux/slices/AuthSlice';
+import { useDispatch } from 'react-redux';
+
+import { toast } from 'react-toastify';
+import authAPI from '../../api/AuthAPI';
+
 const Signup = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [formData, setFormData] = useState({
-    name: '',
+    username: '',
     email: '',
-    password: '',
-    confirmPassword: '',
+    password1: '',
+    password2: '',
     agreeToTerms: false
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -31,13 +38,12 @@ const Signup = () => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Validate form
     const newErrors = {};
-    if (!formData.name) newErrors.name = 'Name is required';
+    if (!formData.username) newErrors.username = 'Username is required';
     if (!formData.email) newErrors.email = 'Email is required';
-    if (!formData.password) newErrors.password = 'Password is required';
-    if (formData.password.length < 8) newErrors.password = 'Password must be at least 8 characters';
-    if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
+    if (!formData.password1) newErrors.password1 = 'Password is required';
+    if (formData.password1.length < 8) newErrors.password1 = 'Password must be at least 8 characters';
+    if (formData.password1 !== formData.password2) newErrors.password2 = 'Passwords do not match';
     if (!formData.agreeToTerms) newErrors.agreeToTerms = 'You must agree to the terms and conditions';
     
     if (Object.keys(newErrors).length > 0) {
@@ -46,35 +52,34 @@ const Signup = () => {
       return;
     }
     
-    // Here you would typically make an API call to register the user
+   
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Handle successful registration (e.g., store token, redirect)
+      const response = await authAPI.register(formData);
+      const payload = {
+        user: response.user,
+        tokens: response.tokens
+      }
+      dispatch(register(payload));
       console.log('Registration successful', formData);
-      
-      // Redirect to email verification page
+      toast.success('Registration successful');
       navigate('/verify-email', { state: { email: formData.email } });
       
-      // Reset form
       setFormData({
-        name: '',
+        username: '',
         email: '',
-        password: '',
-        confirmPassword: '',
+        password1: '',
+        password2: '',
         agreeToTerms: false
       });
       setErrors({});
     } catch (error) {
       console.error('Registration failed', error);
-      setErrors({ form: 'Registration failed. Please try again.' });
+      toast.error('Registration failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -122,15 +127,15 @@ const Signup = () => {
         
         <motion.div variants={itemVariants}>
           <FormInput
-            id="name"
+            id="username"
             type="text"
-            label="Full name"
-            placeholder="John Doe"
+            label="Username"
+            placeholder="johnedoe"
             icon={FiUser}
-            value={formData.name}
+            value={formData.username}
             onChange={handleChange}
             required
-            error={errors.name}
+            error={errors.username}
           />
         </motion.div>
         
@@ -150,29 +155,29 @@ const Signup = () => {
         
         <motion.div variants={itemVariants}>
           <FormInput
-            id="password"
+            id="password1"
             type="password"
             label="Password"
             placeholder="••••••••"
             icon={FiLock}
-            value={formData.password}
+            value={formData.password1}
             onChange={handleChange}
             required
-            error={errors.password}
+            error={errors.password1}
           />
         </motion.div>
         
         <motion.div variants={itemVariants}>
           <FormInput
-            id="confirmPassword"
+            id="password2"
             type="password"
             label="Confirm password"
             placeholder="••••••••"
             icon={FiLock}
-            value={formData.confirmPassword}
+            value={formData.password2}
             onChange={handleChange}
             required
-            error={errors.confirmPassword}
+            error={errors.password2}
           />
         </motion.div>
         

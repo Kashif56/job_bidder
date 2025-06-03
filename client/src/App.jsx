@@ -1,6 +1,8 @@
 
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 // Auth Pages
 import Login from './pages/auth/Login';
@@ -24,30 +26,32 @@ import Projects from './pages/dashboard/Projects';
 import GenerateProposal from './pages/dashboard/proposals/GenerateProposal';
 import AllProposals from './pages/dashboard/proposals/AllProposals';
 
+
+// Redux
+import { useSelector } from 'react-redux';
+
 function App() {
-  // Simple auth check - in a real app, this would check JWT or session
-  const isAuthenticated = () => {
-    // For demo purposes, always return true
-    // In production, check localStorage for token or use a proper auth state
-    return true;
-  };
+  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+
+
 
   return (
     <Router>
+      <ToastContainer position="top-right" autoClose={5000} hideProgressBar={false} newestOnTop closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover />
       <AnimatePresence mode="wait">
         <Routes>
           {/* Landing Page */}
           <Route path="/" element={<LandingPage />} />
           
           {/* Auth Routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/verify-email" element={<EmailVerification />} />
+          <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" /> : <Login />} />
+          <Route path="/signup" element={isAuthenticated ? <Navigate to="/dashboard" /> : <Signup />} />
+          <Route path="/forgot-password" element={isAuthenticated ? <Navigate to="/dashboard" /> : <ForgotPassword />} />
+          <Route path="/reset-password" element={isAuthenticated ? <Navigate to="/dashboard" /> : <ResetPassword />} />
+          <Route path="/verify-email" element={isAuthenticated ? <Navigate to="/dashboard" /> : <EmailVerification />} />
           
           {/* Dashboard Routes */}
-          <Route path="/dashboard" element={<DashboardLayout />}>
+          <Route path="/dashboard" element={isAuthenticated ? <DashboardLayout /> : <Navigate to="/login" />}>
             <Route index element={<Dashboard />} />
             <Route path="profile" element={<FreelanceProfile />} />
             <Route path="projects" element={<Projects />} />
@@ -59,7 +63,7 @@ function App() {
           </Route>
           
           {/* Catch all - 404 */}
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />} />
         </Routes>
       </AnimatePresence>
     </Router>
