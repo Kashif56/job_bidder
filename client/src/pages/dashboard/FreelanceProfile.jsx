@@ -1,8 +1,13 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FiSave, FiPlus, FiX } from 'react-icons/fi';
+import ProfileImport from '../../components/profile/ProfileImport';
 
 const FreelanceProfile = () => {
+  // State to control which view to show (import or form)
+  const [showImport, setShowImport] = useState(true);
+  const [rawProfileData, setRawProfileData] = useState('');
+  
   // Sample profile data
   const [profile, setProfile] = useState({
     name: 'John Doe',
@@ -65,6 +70,17 @@ const FreelanceProfile = () => {
     setShowSuccessMessage(true);
     setTimeout(() => setShowSuccessMessage(false), 3000);
   };
+  
+  // Handle profile data submission from the import component
+  const handleProfileDataSubmit = (textData) => {
+    setRawProfileData(textData);
+    
+    // In a real implementation, this would call an LLM to parse the text
+    // For now, we'll just switch to the form view with the existing sample data
+    // Later, you would update the profile state with the parsed data
+    
+    setShowImport(false);
+  };
 
   // Add new skill
   const addSkill = () => {
@@ -95,6 +111,10 @@ const FreelanceProfile = () => {
   };
 
   return (
+    <>
+    {showImport ? (
+      <ProfileImport onProfileDataSubmit={handleProfileDataSubmit} />
+    ) : (
     <div className="space-y-6">
       {/* Page header */}
       <div className="bg-white rounded-lg p-6 border border-gray-200">
@@ -473,6 +493,8 @@ const FreelanceProfile = () => {
         </div>
       )}
     </div>
+    )}
+    </>
   );
 };
 

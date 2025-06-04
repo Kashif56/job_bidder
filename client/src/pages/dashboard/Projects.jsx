@@ -112,6 +112,98 @@ const Projects = () => {
         </div>
       </div>
 
+
+      {/* Project stats */}
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <motion.div
+          className="bg-white rounded-lg p-6 border border-gray-200"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+        >
+          <div className="flex items-center">
+            <div className="flex-shrink-0 p-3 rounded-md bg-emerald-100 text-emerald-600">
+              <FiFileText className="h-6 w-6" />
+            </div>
+            <div className="ml-5 w-0 flex-1">
+              <dl>
+                <dt className="text-sm font-medium text-gray-500 truncate">Total Projects</dt>
+                <dd className="flex items-baseline">
+                  <div className="text-2xl font-semibold text-gray-900">{projects.length}</div>
+                </dd>
+              </dl>
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div
+          className="bg-white rounded-lg p-6 border border-gray-200"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.2 }}
+        >
+          <div className="flex items-center">
+            <div className="flex-shrink-0 p-3 rounded-md bg-emerald-100 text-emerald-600">
+              <FiClock className="h-6 w-6" />
+            </div>
+            <div className="ml-5 w-0 flex-1">
+              <dl>
+                <dt className="text-sm font-medium text-gray-500 truncate">Active Projects</dt>
+                <dd className="flex items-baseline">
+                  <div className="text-2xl font-semibold text-gray-900">
+                    {projects.filter(p => p.status === 'active').length}
+                  </div>
+                </dd>
+              </dl>
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div
+          className="bg-white rounded-lg p-6 border border-gray-200"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.3 }}
+        >
+          <div className="flex items-center">
+            <div className="flex-shrink-0 p-3 rounded-md bg-emerald-100 text-emerald-600">
+              <FiExternalLink className="h-6 w-6" />
+            </div>
+            <div className="ml-5 w-0 flex-1">
+              <dl>
+                <dt className="text-sm font-medium text-gray-500 truncate">Completed Projects</dt>
+                <dd className="flex items-baseline">
+                  <div className="text-2xl font-semibold text-gray-900">
+                    {projects.filter(p => p.status === 'completed').length}
+                  </div>
+                </dd>
+              </dl>
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div
+          className="bg-white rounded-lg p-6 border border-gray-200"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.4 }}
+        >
+          <div className="flex items-center">
+            <div className="flex-shrink-0 p-3 rounded-md bg-emerald-100 text-emerald-600">
+              <FiDollarSign className="h-6 w-6" />
+            </div>
+            <div className="ml-5 w-0 flex-1">
+              <dl>
+                <dt className="text-sm font-medium text-gray-500 truncate">Total Revenue</dt>
+                <dd className="flex items-baseline">
+                  <div className="text-2xl font-semibold text-gray-900">$17,500</div>
+                </dd>
+              </dl>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+
       {/* Tabs and search */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
@@ -164,6 +256,8 @@ const Projects = () => {
             </div>
           </div>
         </div>
+
+        
 
         {/* Projects grid */}
         <div className="p-6">
@@ -286,96 +380,7 @@ const Projects = () => {
         </div>
       </div>
 
-      {/* Project stats */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <motion.div
-          className="bg-white rounded-lg p-6 border border-gray-200"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.1 }}
-        >
-          <div className="flex items-center">
-            <div className="flex-shrink-0 p-3 rounded-md bg-emerald-100 text-emerald-600">
-              <FiFileText className="h-6 w-6" />
-            </div>
-            <div className="ml-5 w-0 flex-1">
-              <dl>
-                <dt className="text-sm font-medium text-gray-500 truncate">Total Projects</dt>
-                <dd className="flex items-baseline">
-                  <div className="text-2xl font-semibold text-gray-900">{projects.length}</div>
-                </dd>
-              </dl>
-            </div>
-          </div>
-        </motion.div>
-
-        <motion.div
-          className="bg-white rounded-lg p-6 border border-gray-200"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.2 }}
-        >
-          <div className="flex items-center">
-            <div className="flex-shrink-0 p-3 rounded-md bg-emerald-100 text-emerald-600">
-              <FiClock className="h-6 w-6" />
-            </div>
-            <div className="ml-5 w-0 flex-1">
-              <dl>
-                <dt className="text-sm font-medium text-gray-500 truncate">Active Projects</dt>
-                <dd className="flex items-baseline">
-                  <div className="text-2xl font-semibold text-gray-900">
-                    {projects.filter(p => p.status === 'active').length}
-                  </div>
-                </dd>
-              </dl>
-            </div>
-          </div>
-        </motion.div>
-
-        <motion.div
-          className="bg-white rounded-lg p-6 border border-gray-200"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.3 }}
-        >
-          <div className="flex items-center">
-            <div className="flex-shrink-0 p-3 rounded-md bg-emerald-100 text-emerald-600">
-              <FiExternalLink className="h-6 w-6" />
-            </div>
-            <div className="ml-5 w-0 flex-1">
-              <dl>
-                <dt className="text-sm font-medium text-gray-500 truncate">Completed Projects</dt>
-                <dd className="flex items-baseline">
-                  <div className="text-2xl font-semibold text-gray-900">
-                    {projects.filter(p => p.status === 'completed').length}
-                  </div>
-                </dd>
-              </dl>
-            </div>
-          </div>
-        </motion.div>
-
-        <motion.div
-          className="bg-white rounded-lg p-6 border border-gray-200"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.4 }}
-        >
-          <div className="flex items-center">
-            <div className="flex-shrink-0 p-3 rounded-md bg-emerald-100 text-emerald-600">
-              <FiDollarSign className="h-6 w-6" />
-            </div>
-            <div className="ml-5 w-0 flex-1">
-              <dl>
-                <dt className="text-sm font-medium text-gray-500 truncate">Total Revenue</dt>
-                <dd className="flex items-baseline">
-                  <div className="text-2xl font-semibold text-gray-900">$17,500</div>
-                </dd>
-              </dl>
-            </div>
-          </div>
-        </motion.div>
-      </div>
+      
 
       {/* Delete confirmation modal */}
       {showDeleteModal && (
