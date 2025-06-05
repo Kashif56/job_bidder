@@ -1,3 +1,34 @@
+venv
+.env
+.pyc
+venv
+.env
+.db
+.db-journal
+.pyc
+__pycache__
+
+# Virtual environment
+venv/
+
+# Django
+*.pyc
+__pycache__/
+
+
+
+# IDE
+.idea/
+.vscode/
+
+
+media/
+
+# Logs
+*.log
+
+# Temporary files
+*~
 # Logs
 logs
 *.log
@@ -22,3 +53,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+
+.windsurf
+.windsurfrules
