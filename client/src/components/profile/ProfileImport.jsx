@@ -83,11 +83,6 @@ Work Experience:
 2. Full Stack Developer at WebDev Agency, Los Angeles, CA (2019-2021)
    Developed and maintained web applications for clients in various industries.
 
-Education:
-Bachelor of Science in Computer Science, University of California, Berkeley, CA (2015-2019)
-
-Languages:
-English (Native), Spanish (Intermediate)
 
 Portfolio Links:
 Personal Website: https://johndoe.dev

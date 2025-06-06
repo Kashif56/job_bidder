@@ -15,9 +15,11 @@ const profileSlice = createSlice({
     reducers: {
         setProfileData: (state, action) => {
             state.profile_data = action.payload;
+            localStorage.setItem('profile_data', JSON.stringify(action.payload));
         },
         setIsRawSubmitted: (state, action) => {
             state.is_raw_submitted = action.payload;
+            localStorage.setItem('is_raw_submitted', action.payload);
         },
 
         resetProfileData: (state) => {

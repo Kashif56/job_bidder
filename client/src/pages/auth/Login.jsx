@@ -6,15 +6,23 @@ import { FiMail, FiLock, FiLogIn } from 'react-icons/fi';
 import AuthLayout from '../../components/auth/AuthLayout';
 import FormInput from '../../components/auth/FormInput';
 import AuthButton from '../../components/auth/AuthButton';
+import AuthAPI from '../../api/AuthAPI';
+import { useDispatch } from 'react-redux';
+import { login } from '../../redux/slices/AuthSlice';
+import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
   const [formData, setFormData] = useState({
-    email: '',
+    login: '',
     password: '',
-    rememberMe: false
+    rememberMe: true
   });
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
+
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -30,7 +38,7 @@ const Login = () => {
     
     // Validate form
     const newErrors = {};
-    if (!formData.email) newErrors.email = 'Email is required';
+    if (!formData.login) newErrors.login = 'Email or username is required';
     if (!formData.password) newErrors.password = 'Password is required';
     
     if (Object.keys(newErrors).length > 0) {
@@ -41,22 +49,30 @@ const Login = () => {
     
     // Here you would typically make an API call to authenticate the user
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Handle successful login (e.g., store token, redirect)
-      console.log('Login successful', formData);
-      
-      // Reset form
-      setFormData({
-        email: '',
-        password: '',
-        rememberMe: false
-      });
-      setErrors({});
+      const response = await AuthAPI.login(formData);
+      if (response.error) {
+        toast.error(response.error);
+      } else {
+        const payload = {
+          user: response.user,
+          tokens: response.tokens
+        }
+        toast.success('Login successful');
+        dispatch(login(payload));
+        console.log('Login successful', formData);
+        
+        // Reset form
+        setFormData({
+          login: '',
+          password: '',
+          rememberMe: true
+        });
+        
+        navigate('/dashboard');
+      }
     } catch (error) {
       console.error('Login failed', error);
-      setErrors({ form: 'Invalid email or password' });
+      toast.error(error.message || 'Invalid login or password');
     } finally {
       setIsLoading(false);
     }
@@ -110,15 +126,15 @@ const Login = () => {
         
         <motion.div variants={itemVariants}>
           <FormInput
-            id="email"
-            type="email"
-            label="Email address"
+            id="login"
+            type="text"
+            label="Email or Username"
             placeholder="you@example.com"
             icon={FiMail}
-            value={formData.email}
+            value={formData.login}
             onChange={handleChange}
             required
-            error={errors.email}
+            error={errors.login}
           />
         </motion.div>
         

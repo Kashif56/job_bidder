@@ -33,7 +33,8 @@ axiosInstance.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('access_token');
         if (token) {
-            config.headers['Authorization'] = `Bearer ${token}`;
+            // Use standard Authorization header with Bearer token
+            config.headers.Authorization = `Bearer ${token}`;
         }
         return config;
     },
@@ -54,7 +55,7 @@ axiosInstance.interceptors.response.use(
                     failedQueue.push({ resolve, reject });
                 })
                     .then(token => {
-                        originalRequest.headers['Authorization'] = `Bearer ${token}`;
+                        originalRequest.headers.Authorization = `Bearer ${token}`;
                         return axiosInstance(originalRequest);
                     })
                     .catch(err => Promise.reject(err));
@@ -85,22 +86,23 @@ axiosInstance.interceptors.response.use(
                 // If successful, update tokens
                 if (response.data) {
                     const { access } = response.data;
+                    
+                    // Store the new token in localStorage FIRST
                     localStorage.setItem('access_token', access);
                     
                     // Update auth header for original request
-                    originalRequest.headers['Authorization'] = `Bearer ${access}`;
+                    // Use a new config object to avoid interceptor issues
+                    const newConfig = { ...originalRequest };
+                    newConfig.headers.Authorization = `Bearer ${access}`;
                     
                     // Process any queued requests with new token
                     processQueue(null, access);
                     
-                    // Retry the original request
-                    return axiosInstance(originalRequest);
+                    // Retry the original request with the new config
+                    // Skip the request interceptor by using axios directly
+                    return axios(newConfig);
                 }
             } catch (refreshError) {
-                // If refresh fails, clear auth and reject all queued requests
-                localStorage.removeItem('access_token');
-                localStorage.removeItem('refresh_token');
-                
                 processQueue(refreshError, null);
                 
                 // Redirect to login page
