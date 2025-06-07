@@ -83,6 +83,7 @@ axiosInstance.interceptors.response.use(
                     refresh: refreshToken
                 });
                 
+        
                 // If successful, update tokens
                 if (response.data) {
                     const { access } = response.data;
@@ -101,11 +102,17 @@ axiosInstance.interceptors.response.use(
                     // Retry the original request with the new config
                     // Skip the request interceptor by using axios directly
                     return axios(newConfig);
+                } else {
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('refresh_token');
+                    window.location.href = '/login';
                 }
             } catch (refreshError) {
                 processQueue(refreshError, null);
                 
                 // Redirect to login page
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('refresh_token');
                 window.location.href = '/login';
                 return Promise.reject(refreshError);
             } finally {

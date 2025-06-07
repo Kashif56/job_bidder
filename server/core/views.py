@@ -185,6 +185,9 @@ def update_freelancer_profile(request):
         # Update only the fields that are provided
         if 'full_name' in data:
             profile.full_name = data['full_name']
+       
+        profile.user.email = data.get('email', profile.user.email)
+        profile.user.save()
         if 'tagline' in data:
             profile.tagline = data['tagline']
         if 'about' in data:

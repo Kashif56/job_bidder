@@ -9,6 +9,8 @@ from django.db.models import Q
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 
+from core.models import FreelancerProfile
+
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -105,6 +107,9 @@ def login_view(request):
     
     if user is not None:
         refresh = RefreshToken.for_user(user)
+        is_raw_submitted = False
+        if FreelancerProfile.objects.filter(user=user).exists():
+            is_raw_submitted = True
         return Response({
             'user': {
                 'id': user.id,
@@ -114,7 +119,8 @@ def login_view(request):
             'tokens': {
                 'refresh': str(refresh),
                 'access': str(refresh.access_token)
-            }
+            },
+            'is_raw_submitted': is_raw_submitted
         }, status=status.HTTP_200_OK)
     
     print("Invalid credentials")

@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FiSave, FiPlus, FiX } from 'react-icons/fi';
 import ProfileImport from '../../components/profile/ProfileImport';
+import WorkExperience from '../../components/profile/WorkExperience';
 import CoreAPI from '../../api/CoreAPI';
 
 import { useSelector, useDispatch } from 'react-redux';
-import { setProfileData, setIsRawSubmitted } from '../../redux/slices/ProfileSlice';
+import { setProfileData, setExperiencesData, setIsRawSubmitted } from '../../redux/slices/ProfileSlice';
 
 const FreelanceProfile = () => {
   // State to control which view to show (import or form)
@@ -13,21 +14,17 @@ const FreelanceProfile = () => {
   const [rawProfileData, setRawProfileData] = useState('');
 
   const dispatch = useDispatch();
-  const { profile_data, is_raw_submitted } = useSelector((state) => state.profile);
   const {user} = useSelector((state) => state.auth);
 
-  console.log(user);
-  
-  // Sample profile data
   const [profile, setProfile] = useState({
     name: '',
     title: '',
-    email: user.email ? user.email : 'Not Set',
+    email: user.email ? user.email : '',
    
     rate: 75,
     about: '',
     skills: [],
-    experience: [],
+    experience: [], // Initialize as empty array
     portfolioURI: '', // Separate portfolio URI field
 
     socialLinks: [
@@ -35,40 +32,119 @@ const FreelanceProfile = () => {
   });
 
 
-  // Get Profile Data from API
+  // Get profile and experiences data from Redux store
+  const { profile_data, experiences_data, last_updated, is_raw_submitted } = useSelector((state) => state.profile);
+  
+  // Get Profile Data from API or Redux store
   useEffect(() => {
-    CoreAPI.get_freelancer_profile()
-    .then((response) => {
-      console.log('Profile fetched successfully:', response);
-      
-      // Extract data from the response
-      const profileData = response.data.freelance_profile;
-      const experienceData = response.data.experience || [];
-      const projectsData = response.data.projects || [];
+    const shouldFetchData = !profile_data || !last_updated;
+    
+    // Only fetch from API if we don't have data in Redux or it's been more than 1 hour
+    if (shouldFetchData) {
+      CoreAPI.get_freelancer_profile()
+      .then((response) => {
+        console.log('Profile fetched successfully from API:', response);
+        
+        // Extract data from the response
+        const profileData = response.data.freelance_profile;
+        const experienceData = response.data.experience || [];
+        const projectsData = response.data.projects || [];
+        
+        // Parse the skills array (handle both string and array formats)
+        let skillsArray = [];
+        if (profileData.skills) {
+          skillsArray = Array.isArray(profileData.skills) 
+            ? profileData.skills 
+            : typeof profileData.skills === 'string' 
+              ? JSON.parse(profileData.skills) 
+              : [];
+        }
+        
+        // Parse portfolio URI
+        let portfolioURI = '';
+        if (profileData.portfolio) {
+          portfolioURI = profileData.portfolio;
+        }
+        
+        // Parse social links if they exist
+        let socialLinks = [];
+        if (profileData.social_links) {
+          try {
+            const socialData = typeof profileData.social_links === 'string' 
+              ? JSON.parse(profileData.social_links) 
+              : profileData.social_links;
+              
+            // Convert to array format expected by the UI
+            if (Array.isArray(socialData)) {
+              socialLinks = socialData.map(link => ({
+                title: link.title || link.platform || '',
+                url: link.url || ''
+              }));
+            }
+          } catch (e) {
+            console.error('Error parsing social links:', e);
+          }
+        }
+        
+        // Ensure we have at least 3 empty social link slots
+        while (socialLinks.length < 3) {
+          socialLinks.push({ title: '', url: '' });
+        }
+        
+        // Format experience data for the UI
+        const formattedExperience = experienceData.map(exp => ({
+          id: exp.id,
+          title: exp.title,
+          company: exp.company,
+          location: exp.location || '',
+          startDate: exp.start_date,
+          endDate: exp.end_date || 'Present',
+          description: exp.description || ''
+        }));
+        
+        // Save profile data to Redux
+        dispatch(setProfileData(profileData));
+        
+        // Save experiences data to Redux
+        dispatch(setExperiencesData(formattedExperience));
+        
+        // Update local state
+        setProfile({
+          name: profileData.full_name || '',
+          title: profileData.tagline || '',
+          email: user.email || profileData.user.email || '',
+          rate: profileData.rate || 75,
+          about: profileData.about || '',
+          skills: skillsArray,
+          experience: formattedExperience,
+          portfolioURI: portfolioURI,
+          socialLinks: socialLinks,
+          projects: projectsData
+        });
+      })
+      .catch((error) => {
+        console.error('Failed to fetch profile:', error);
+      });
+    } else {
+      console.log('Using cached profile data from Redux');
       
       // Parse the skills array (handle both string and array formats)
       let skillsArray = [];
-      if (profileData.skills) {
-        skillsArray = Array.isArray(profileData.skills) 
-          ? profileData.skills 
-          : typeof profileData.skills === 'string' 
-            ? JSON.parse(profileData.skills) 
+      if (profile_data.skills) {
+        skillsArray = Array.isArray(profile_data.skills) 
+          ? profile_data.skills 
+          : typeof profile_data.skills === 'string' 
+            ? JSON.parse(profile_data.skills) 
             : [];
-      }
-      
-      // Parse portfolio URI
-      let portfolioURI = '';
-      if (profileData.portfolio) {
-        portfolioURI = profileData.portfolio;
       }
       
       // Parse social links if they exist
       let socialLinks = [];
-      if (profileData.social_links) {
+      if (profile_data.social_links) {
         try {
-          const socialData = typeof profileData.social_links === 'string' 
-            ? JSON.parse(profileData.social_links) 
-            : profileData.social_links;
+          const socialData = typeof profile_data.social_links === 'string' 
+            ? JSON.parse(profile_data.social_links) 
+            : profile_data.social_links;
             
           // Convert to array format expected by the UI
           if (Array.isArray(socialData)) {
@@ -77,7 +153,6 @@ const FreelanceProfile = () => {
               url: link.url || ''
             }));
           }
-          console.log('Parsed social links:', socialLinks);
         } catch (e) {
           console.error('Error parsing social links:', e);
         }
@@ -88,36 +163,21 @@ const FreelanceProfile = () => {
         socialLinks.push({ title: '', url: '' });
       }
       
-      // Format experience data for the UI
-      const formattedExperience = experienceData.map(exp => ({
-        id: exp.id,
-        title: exp.title,
-        company: exp.company,
-        location: '',  // Add location if your model has it
-        startDate: exp.start_date,
-        endDate: exp.end_date || 'Present',
-        description: ''
-      }));
-      
+      // Use data from Redux store
       setProfile({
-        name: profileData.full_name || '',
-        title: profileData.tagline || '',
-        email: user.email || 'Not Set',
-        rate: profileData.rate || 75,
-        about: profileData.about || '',
+        name: profile_data.full_name || '',
+        title: profile_data.tagline || '',
+        email: user.email || (profile_data.user ? profile_data.user.email : ''),
+        rate: profile_data.rate || 75,
+        about: profile_data.about || '',
         skills: skillsArray,
-        experience: formattedExperience,
-        portfolioURI: portfolioURI,
+        experience: experiences_data || [],
+        portfolioURI: profile_data.portfolio || '',
         socialLinks: socialLinks,
-        projects: projectsData
+        projects: profile_data.projects || []
       });
-      
-      console.log('Formatted profile data:', profile);
-    })
-    .catch((error) => {
-      console.error('Failed to fetch profile:', error);
-    });
-  }, [user.email]); // Add user.email as dependency
+    }
+  }, [dispatch, user.email]); // Add dispatch and user.email as dependencies
 
 
 
@@ -134,39 +194,147 @@ const FreelanceProfile = () => {
   const [showSocialLinkForm, setShowSocialLinkForm] = useState(false);
 
   // Handle profile update
-  const handleProfileUpdate = (e) => {
+  const handleProfileUpdate = async (e) => {
     e.preventDefault();
     
-    // Filter valid social links
-    const validSocialLinks = profile.socialLinks.filter(link => link.title && link.url).map(link => ({
-      title: link.title,
-      url: link.url
-    }));
-    
-    console.log('Sending social links to API:', validSocialLinks);
-    
-    // Prepare data for API
-    const profileData = {
-      full_name: profile.name,
-      tagline: profile.title,
-      about: profile.about,
-      skills: profile.skills,
-      portfolio: profile.portfolioURI, // Use the dedicated portfolioURI field
-      social_links: validSocialLinks // Send properly formatted social links
-    };
-    
-    // Call the API to update the profile
-    CoreAPI.update_freelancer_profile(profileData)
-      .then((response) => {
-        console.log('Profile updated successfully:', response);
+    try {
+      // Filter valid social links
+      const validSocialLinks = profile.socialLinks.filter(link => link.title && link.url).map(link => ({
+        title: link.title,
+        url: link.url
+      }));
+      
+      // Format the data for the API
+      const profileData = {
+        full_name: profile.name,
+        email: profile.email,
+        tagline: profile.title,
+        about: profile.about,
+        skills: profile.skills,
+        portfolio: profile.portfolioURI,
+        social_links: profile.socialLinks.filter(link => link.title && link.url)
+      };
+      
+      // Call the API to update the profile
+      const response = await CoreAPI.update_freelancer_profile(profileData);
+      console.log('Profile updated successfully:', response);
+      
+      // The response structure from the API is:
+      // {
+      //   status: "success",
+      //   message: "Freelancer profile updated successfully",
+      //   data: { /* profile data */ }
+      // }
+      
+      if (response && response.status === 'success' && response.data) {
+        // Dispatch the profile data to Redux
+        dispatch(setProfileData(response.data));
+        
+        // Show success message
         setShowSuccessMessage(true);
-        setTimeout(() => setShowSuccessMessage(false), 3000);
-      })
-      .catch((error) => {
-        console.error('Failed to update profile:', error);
-        // You could add error state handling here
-      });
+        
+        // Hide success message after 3 seconds
+        setTimeout(() => {
+          setShowSuccessMessage(false);
+        }, 3000);
+      } else {
+        console.error('Unexpected API response structure:', response);
+      }
+      
+      // Success message is handled in the API response block
+      
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+      // TODO: Show error message
+    }
   };
+  
+  // Handle experience updates (create, update, delete)
+  const handleExperienceUpdates = async () => {
+    try {
+      // Get the current experiences from the API
+      const response = await CoreAPI.get_experiences();
+      const serverExperiences = response.data || [];
+      
+      // Find experiences to create, update, or delete
+      const localExperiences = [...profile.experience];
+      
+      // Experiences to create (those with temporary IDs or not on the server)
+      const experiencesToCreate = localExperiences.filter(exp => 
+        exp.id.toString().includes('temp_') || 
+        !serverExperiences.some(sExp => sExp.id === exp.id)
+      );
+      
+      // Experiences to update (those that exist on both client and server)
+      const experiencesToUpdate = localExperiences.filter(exp => 
+        !exp.id.toString().includes('temp_') && 
+        serverExperiences.some(sExp => sExp.id === exp.id)
+      );
+      
+      // Experiences to delete (those on the server but not in local state)
+      const experiencesToDelete = serverExperiences.filter(sExp => 
+        !localExperiences.some(exp => exp.id === sExp.id)
+      );
+      
+      // Process creates
+      for (const exp of experiencesToCreate) {
+        const expData = {
+          title: exp.title,
+          company: exp.company,
+          start_date: exp.startDate,
+          end_date: exp.endDate === 'Present' ? null : exp.endDate,
+          description: exp.description || ''
+        };
+        await CoreAPI.create_experience(expData);
+      }
+      
+      // Process updates
+      for (const exp of experiencesToUpdate) {
+        const expData = {
+          title: exp.title,
+          company: exp.company,
+          start_date: exp.startDate,
+          end_date: exp.endDate === 'Present' ? null : exp.endDate,
+          description: exp.description || ''
+        };
+        await CoreAPI.update_experience(exp.id, expData);
+      }
+      
+      // Process deletes
+      for (const exp of experiencesToDelete) {
+        await CoreAPI.delete_experience(exp.id);
+      }
+      
+      // Refresh experiences after all operations
+      const updatedResponse = await CoreAPI.get_experiences();
+      const updatedExperiences = updatedResponse.data || [];
+      
+      // Format and update local state
+      const formattedExperiences = updatedExperiences.map(exp => ({
+        id: exp.id,
+        title: exp.title,
+        company: exp.company,
+        location: exp.location || '',
+        startDate: exp.start_date,
+        endDate: exp.end_date || 'Present',
+        description: exp.description || ''
+      }));
+      
+      // Update Redux store with the new experiences data
+      dispatch(setExperiencesData(formattedExperiences));
+      
+      // Update local state
+      setProfile(prev => ({
+        ...prev,
+        experience: formattedExperiences
+      }));
+      
+    } catch (error) {
+      console.error('Failed to update experiences:', error);
+    }
+  };
+
+  
   
   // Handle profile data submission from the import component
   const handleProfileDataSubmit = (textData) => {
@@ -230,10 +398,18 @@ const FreelanceProfile = () => {
   // Handle input change
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setProfile({
-      ...profile,
+    setProfile(prevProfile => ({
+      ...prevProfile,
       [name]: value
-    });
+    }));
+  };
+  
+  // Handle experience change
+  const handleExperienceChange = (updatedExperiences) => {
+    setProfile(prevProfile => ({
+      ...prevProfile,
+      experience: updatedExperiences
+    }));
   };
 
   return (
@@ -509,83 +685,12 @@ const FreelanceProfile = () => {
             </div>
           </motion.div>
 
-          {/* Experience */}
-          <motion.div 
-            className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden lg:col-span-2"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.2 }}
-          >
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-lg font-medium text-gray-800">Work Experience</h2>
-              <button
-                type="button"
-                className="inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
-              >
-                <FiPlus className="-ml-0.5 mr-2 h-4 w-4" />
-                Add Experience
-              </button>
-            </div>
-            <div className="p-6 space-y-6">
-              {profile.experience && profile.experience.length > 0 ? (
-                profile.experience.map((exp, index) => (
-                  <div key={exp.id || index} className={`${index > 0 ? 'pt-6 border-t border-gray-200' : ''}`}>
-                    <div className="flex flex-col md:flex-row md:items-start md:justify-between">
-                      <div>
-                        <h3 className="text-lg font-medium text-gray-900">{exp.title}</h3>
-                        <div className="mt-1 flex items-center text-sm text-gray-600">
-                          <span>{exp.company}</span>
-                          {exp.location && (
-                            <>
-                              <span className="mx-2">•</span>
-                              <span>{exp.location}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                      <div className="mt-2 md:mt-0 text-sm text-gray-500">
-                        {exp.startDate} — {exp.endDate}
-                      </div>
-                    </div>
-                    {exp.description && (
-                      <p className="mt-3 text-sm text-gray-600">
-                        {exp.description}
-                      </p>
-                    )}
-                    <div className="mt-3 flex space-x-2">
-                      <button
-                        type="button"
-                        className="inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-xs leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        className="inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-xs leading-4 font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="py-8 text-center text-gray-500 bg-gray-50 rounded-md">
-                  <p className="font-medium">No work experience added yet</p>
-                  <p className="text-sm mt-1">Add your work history to showcase your professional background</p>
-                  <button
-                    type="button"
-                    className="mt-4 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
-                  >
-                    <FiPlus className="-ml-1 mr-2 h-4 w-4" />
-                    Add First Experience
-                  </button>
-                </div>
-              )}
-            </div>
-          </motion.div>
-
+          
          
         </div>
+
+        
+
 
         <div className="mt-6 flex justify-end">
           <button
@@ -603,6 +708,12 @@ const FreelanceProfile = () => {
           </button>
         </div>
       </form>
+
+      {/* Work Experience Section */}
+      <WorkExperience 
+            experiences={profile.experience} 
+            onExperienceChange={handleExperienceChange} 
+          />
 
       {/* Success message */}
       {showSuccessMessage && (

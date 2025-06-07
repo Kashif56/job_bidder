@@ -60,6 +60,8 @@ class Experience(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     company = models.CharField(max_length=200)
     title = models.CharField(max_length=200)
+    description = models.TextField(max_length=1000, null=True, blank=True)
+    location = models.CharField(max_length=200, null=True, blank=True)
     start_date = models.DateField()
     end_date = models.DateField(null=True, blank=True)
     

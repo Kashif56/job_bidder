@@ -11,6 +11,7 @@ import { useDispatch } from 'react-redux';
 import { login } from '../../redux/slices/AuthSlice';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
+import { setIsRawSubmitted } from '../../redux/slices/ProfileSlice';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -47,9 +48,10 @@ const Login = () => {
       return;
     }
     
-    // Here you would typically make an API call to authenticate the user
+
     try {
       const response = await AuthAPI.login(formData);
+      console.log(response)
       if (response.error) {
         toast.error(response.error);
       } else {
@@ -57,9 +59,12 @@ const Login = () => {
           user: response.user,
           tokens: response.tokens
         }
+
+        const is_raw_submitted = response.is_raw_submitted
         toast.success('Login successful');
         dispatch(login(payload));
-        console.log('Login successful', formData);
+        dispatch(setIsRawSubmitted(is_raw_submitted))
+
         
         // Reset form
         setFormData({

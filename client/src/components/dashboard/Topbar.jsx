@@ -1,14 +1,24 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { FiBell, FiMenu, FiSearch, FiHelpCircle, FiSettings } from 'react-icons/fi';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { toast } from 'react-toastify';
+
 
 const Topbar = ({ toggleSidebar }) => {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { user, isAuthenticated } = useSelector((state) => state.auth);
+  const dispatch = useDispatch()
+  const navigate = useNavigate()
 
   const credits = 0;
+
+  const handle_logout = (e) => {
+    dispatch(logout())
+    toast.done("Logout Successfull")
+    navigate('/login')
+  }
 
 
 
@@ -144,7 +154,7 @@ const Topbar = ({ toggleSidebar }) => {
                     <div className="border-t border-gray-100"></div>
                     <button
                       className="block w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-gray-100"
-                      onClick={() => console.log('Logout clicked')}
+                      onClick={handle_logout}
                     >
                       Sign out
                     </button>

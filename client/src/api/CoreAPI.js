@@ -34,6 +34,47 @@ const CoreAPI = {
             throw error.response?.data || { error: 'Failed to update freelancer profile' };
         }
     },
+
+    // Work Experience API methods
+    create_experience: async (experienceData) => {
+        try {
+            const response = await axiosInstance.post('/create_experience/', experienceData);
+            return response.data;
+        } catch (error) {
+            console.error('API Error:', error);
+            throw error.response?.data || { error: 'Failed to create experience' };
+        }
+    },
+
+    update_experience: async (experienceId, experienceData) => {
+        try {
+            const response = await axiosInstance.put(`/update_experience/${experienceId}/`, experienceData);
+            return response.data;
+        } catch (error) {
+            console.error('API Error:', error);
+            throw error.response?.data || { error: 'Failed to update experience' };
+        }
+    },
+
+    delete_experience: async (experienceId) => {
+        try {
+            const response = await axiosInstance.delete(`/delete_experience/${experienceId}/`);
+            return response.data;
+        } catch (error) {
+            console.error('API Error:', error);
+            throw error.response?.data || { error: 'Failed to delete experience' };
+        }
+    },
+
+    get_experiences: async () => {
+        try {
+            const response = await axiosInstance.get('/get_experiences/');
+            return response.data;
+        } catch (error) {
+            console.error('API Error:', error);
+            throw error.response?.data || { error: 'Failed to get experiences' };
+        }
+    }
 }
 
 
