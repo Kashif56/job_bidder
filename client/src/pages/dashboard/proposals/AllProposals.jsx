@@ -337,23 +337,6 @@ const AllProposals = () => {
                     scope="col"
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
                     onClick={() => {
-                      setSortBy('style');
-                      toggleSortOrder();
-                    }}
-                  >
-                    <div className="flex items-center">
-                      Style
-                      {sortBy === 'style' && (
-                        <span className="ml-1">
-                          {sortOrder === 'asc' ? '↑' : '↓'}
-                        </span>
-                      )}
-                    </div>
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                    onClick={() => {
                       setSortBy('status');
                       toggleSortOrder();
                     }}
@@ -398,12 +381,10 @@ const AllProposals = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {formatDate(proposal.created_at)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {proposal.style || 'Default'}
-                      </td>
+                 
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(proposal.status)}`}>
-                          {proposal.status || 'Generated'}
+                          {proposal.style?.toUpperCase() || 'Generated'}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">

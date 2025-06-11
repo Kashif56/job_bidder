@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import views_experience
+from . import dashboard_views
 
 urlpatterns = [
     path('create_freelancer_profile/', views.create_freelancer_profile, name='create_freelancer_profile'),
@@ -18,4 +19,10 @@ urlpatterns = [
     path('get_projects/', views.get_projects, name='get_projects'),
     path('update_project/<project_id>/', views.update_project, name='update_project'),
     path('delete_project/<project_id>/', views.del_project, name='delete_project'),
+    
+    # Dashboard endpoints
+    path('dashboard/stats/', dashboard_views.get_dashboard_stats, name='dashboard_stats'),
+    path('dashboard/proposals/', dashboard_views.get_recent_proposals, name='dashboard_proposals'),
+    path('dashboard/opportunities/', dashboard_views.get_job_opportunities, name='dashboard_opportunities'),
+    path('dashboard/data/', dashboard_views.get_dashboard_data, name='dashboard_data'),
 ]

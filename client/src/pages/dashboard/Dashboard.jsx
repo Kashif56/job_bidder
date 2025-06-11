@@ -1,11 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FiFileText, FiPlus, FiTrendingUp, FiClock, FiAward, FiDollarSign } from 'react-icons/fi';
+import { FiFileText, FiPlus, FiTrendingUp, FiClock, FiAward, FiDollarSign, FiRefreshCw } from 'react-icons/fi';
 import { motion } from 'framer-motion';
+import DashboardAPI from '../../api/DashboardAPI';
 
 const Dashboard = () => {
-  // Sample data for dashboard stats
-  const stats = [
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [userName, setUserName] = useState('User');
+  const [stats, setStats] = useState([
     { 
       title: 'Credits Remaining', 
       value: '25', 
@@ -34,10 +37,9 @@ const Dashboard = () => {
       change: '+$750 this month',
       positive: true
     }
-  ];
+  ]);
 
-  // Sample data for recent proposals
-  const recentProposals = [
+  const [recentProposals, setRecentProposals] = useState([
     {
       id: 'prop-001',
       title: 'React Developer for E-commerce Project',
@@ -62,10 +64,9 @@ const Dashboard = () => {
       status: 'Rejected',
       statusColor: 'bg-red-100 text-red-800'
     }
-  ];
+  ]);
 
-  // Sample data for job opportunities
-  const jobOpportunities = [
+  const [jobOpportunities, setJobOpportunities] = useState([
     {
       id: 'job-001',
       title: 'Frontend Developer with React Experience',
@@ -90,7 +91,83 @@ const Dashboard = () => {
       postedDate: '1 day ago',
       relevanceScore: 82
     }
-  ];
+  ]);
+
+  const [tips, setTips] = useState([
+    {
+      title: "Proposal Writing Tips",
+      description: "Learn how to create proposals that stand out and win more clients.",
+      link: "/tips/proposal-writing"
+    },
+    {
+      title: "Pricing Strategies",
+      description: "Discover effective pricing strategies to maximize your freelance income.",
+      link: "/tips/pricing"
+    },
+    {
+      title: "Client Communication",
+      description: "Tips for maintaining clear and effective communication with clients.",
+      link: "/tips/communication"
+    }
+  ]);
+
+  // Function to fetch dashboard data
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await DashboardAPI.getDashboardData();
+      console.log('Dashboard data received:', data);
+      
+      setUserName(data.user_name);
+      setStats(data.stats.map(stat => {
+        // Map API icon names to React components
+        const iconMap = {
+          'FiFileText': <FiFileText className="h-6 w-6 text-emerald-500" />,
+          'FiTrendingUp': <FiTrendingUp className="h-6 w-6 text-emerald-500" />,
+          'FiAward': <FiAward className="h-6 w-6 text-emerald-500" />,
+          'FiDollarSign': <FiDollarSign className="h-6 w-6 text-emerald-500" />
+        };
+        
+        return {
+          ...stat,
+          icon: iconMap[stat.icon] || <FiFileText className="h-6 w-6 text-emerald-500" />
+        };
+      }));
+      
+      // Log and process recent proposals
+      console.log('Recent proposals received:', data.recent_proposals);
+      if (data.recent_proposals && data.recent_proposals.length > 0) {
+        setRecentProposals(data.recent_proposals);
+      }
+      
+      // Log and process job opportunities
+      console.log('Job opportunities received:', data.job_opportunities);
+      if (data.job_opportunities && data.job_opportunities.length > 0) {
+        setJobOpportunities(data.job_opportunities);
+      }
+      
+      // Only update tips if they exist in the response
+      if (data.tips && data.tips.length > 0) {
+        setTips(data.tips);
+      }
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+      setError('Failed to load dashboard data. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  // Function to handle refresh button click
+  const handleRefresh = () => {
+    fetchDashboardData();
+  };
 
   return (
     <div className="space-y-6">
@@ -98,10 +175,18 @@ const Dashboard = () => {
       <div className="bg-white rounded-lg p-6 border border-gray-200">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">Welcome back, User!</h1>
+            <h1 className="text-2xl font-bold text-gray-800">Welcome back, {userName}!</h1>
             <p className="mt-1 text-gray-600">Here's what's happening with your proposals today.</p>
           </div>
           <div className="mt-4 md:mt-0 flex space-x-3">
+            <button
+              onClick={handleRefresh}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+              disabled={loading}
+            >
+              <FiRefreshCw className={`-ml-1 mr-2 h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
             <Link
               to="/dashboard/proposals/generate"
               className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
@@ -113,8 +198,32 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Error message */}
+      {error && (
+        <div className="bg-red-50 border-l-4 border-red-400 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Loading state */}
+      {loading && !error && (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
+        </div>
+      )}
+
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {!loading && !error && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, index) => (
           <motion.div
             key={index}
@@ -140,12 +249,13 @@ const Dashboard = () => {
             </div>
           </motion.div>
         ))}
-      </div>
+      </div> )}
 
       {/* Two column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Proposals */}
-        <div className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
+      {!loading && !error && recentProposals.length > 0 && (
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
             <h2 className="text-lg font-medium text-gray-800">Recent Proposals</h2>
             <Link
@@ -161,7 +271,7 @@ const Dashboard = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex-1 min-w-0">
                     <Link
-                      to={`/dashboard/proposals/${proposal.id}`}
+                      to={`/dashboard/proposals/view/${proposal.id}`}
                       className="text-sm font-medium text-gray-900 hover:text-emerald-600"
                     >
                       {proposal.title}
@@ -170,12 +280,11 @@ const Dashboard = () => {
                       <span className="text-xs text-gray-500">{proposal.platform}</span>
                       <span className="mx-2 text-gray-300">•</span>
                       <span className="text-xs text-gray-500">{proposal.date}</span>
-                    </div>
-                  </div>
-                  <div>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${proposal.statusColor}`}>
+                      <span className="mx-2 text-gray-300">•</span>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${proposal.statusColor}`}>
                       {proposal.status}
                     </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -191,9 +300,11 @@ const Dashboard = () => {
             </Link>
           </div>
         </div>
+      )}
 
         {/* Job Opportunities */}
-        <div className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
+      {!loading && !error && jobOpportunities.length > 0 && (
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
             <h2 className="text-lg font-medium text-gray-800">Recommended Job Opportunities</h2>
             <button className="text-sm font-medium text-emerald-600 hover:text-emerald-500">
@@ -212,6 +323,9 @@ const Dashboard = () => {
                       <span className="text-xs text-gray-500">{job.postedDate}</span>
                     </div>
                     <p className="mt-1 text-xs text-gray-500">{job.budget}</p>
+                    {job.description && (
+                      <p className="mt-1 text-xs text-gray-600 line-clamp-2">{job.description}</p>
+                    )}
                   </div>
                   <div>
                     <div className="flex items-center">
@@ -241,36 +355,25 @@ const Dashboard = () => {
               View More Job Opportunities
             </button>
           </div>
-        </div>
+        </div> )}
       </div>
 
       {/* Tips & Insights */}
-      <div className="bg-white rounded-lg p-6 border border-gray-200">
+      {!loading && !error && (
+        <div className="bg-white rounded-lg p-6 border border-gray-200">
         <h2 className="text-lg font-medium text-gray-800 mb-4">Tips & Insights</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
-            <h3 className="font-medium text-gray-900">Proposal Writing Tips</h3>
-            <p className="mt-1 text-sm text-gray-500">Learn how to create proposals that stand out and win more clients.</p>
-            <a href="#" className="mt-2 inline-block text-sm font-medium text-emerald-600 hover:text-emerald-500">
+          {tips.map((tip, index) => (
+          <div key={index} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+            <h3 className="font-medium text-gray-900">{tip.title}</h3>
+            <p className="mt-1 text-sm text-gray-500">{tip.description}</p>
+            <Link to={tip.link} className="mt-2 inline-block text-sm font-medium text-emerald-600 hover:text-emerald-500">
               Read more
-            </a>
+            </Link>
           </div>
-          <div className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
-            <h3 className="font-medium text-gray-900">Pricing Strategies</h3>
-            <p className="mt-1 text-sm text-gray-500">Discover effective pricing strategies to maximize your freelance income.</p>
-            <a href="#" className="mt-2 inline-block text-sm font-medium text-emerald-600 hover:text-emerald-500">
-              Read more
-            </a>
-          </div>
-          <div className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
-            <h3 className="font-medium text-gray-900">Client Communication</h3>
-            <p className="mt-1 text-sm text-gray-500">Tips for maintaining clear and effective communication with clients.</p>
-            <a href="#" className="mt-2 inline-block text-sm font-medium text-emerald-600 hover:text-emerald-500">
-              Read more
-            </a>
-          </div>
+          ))}
         </div>
-      </div>
+      </div> )}
     </div>
   );
 };
