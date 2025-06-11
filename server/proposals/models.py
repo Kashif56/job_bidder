@@ -12,6 +12,15 @@ PROPOSAL_STATUS = (
     ('rejected', 'Rejected'),
 )
 
+PROPOSAL_STYLES = (
+    ('default', 'Default'),
+    ('professional', 'Professional'),
+    ('creative', 'Creative'),
+    ('solutions', 'Solutions-Focused'),
+    ('casual', 'Casual'),
+    ('technical', 'Technical'),
+)
+
 
 class Proposal(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -19,8 +28,9 @@ class Proposal(models.Model):
     job_description = models.TextField()
     job_details = models.JSONField(default=dict, blank=True, null=True)
 
-    proposal = models.TextField()
+    proposal_text = models.TextField()
     status = models.CharField(max_length=20, default='generated', choices=PROPOSAL_STATUS)
+    style = models.CharField(max_length=20, default='default', choices=PROPOSAL_STYLES)
 
     user_feedback = models.TextField(blank=True, null=True)
 
@@ -29,7 +39,7 @@ class Proposal(models.Model):
 
 
     def __str__(self):
-        return f"Propsal for {self.user.username} - {self.job_description[:50]}"
+        return f"Proposal for {self.user.username} - {self.style} style - {self.job_description[:30]}"
     
     
 

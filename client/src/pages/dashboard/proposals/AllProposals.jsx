@@ -1,95 +1,95 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FiEdit2, FiTrash2, FiCopy, FiDownload, FiFilter, FiSearch, FiChevronDown } from 'react-icons/fi';
+import { FiEdit2, FiTrash2, FiCopy, FiDownload, FiFilter, FiSearch, FiChevronDown, FiEye, FiRefreshCw } from 'react-icons/fi';
 import { motion } from 'framer-motion';
+import { useSelector, useDispatch } from 'react-redux';
+import { toast } from 'react-toastify';
+import ProposalAPI from '../../../api/ProposalAPI';
+import { setProposals } from '../../../redux/slices/ProposalSlice';
 
 const AllProposals = () => {
+  const dispatch = useDispatch();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [sortBy, setSortBy] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc');
   const [showFilters, setShowFilters] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Sample proposal data
-  const proposals = [
-    {
-      id: 'prop-001',
-      title: 'React Developer for E-commerce Project',
-      platform: 'Upwork',
-      client: 'TechSolutions Inc.',
-      date: '2023-05-25',
-      status: 'Submitted',
-      statusColor: 'bg-blue-100 text-blue-800',
-      budget: '$2,000 - $3,000',
-      excerpt: `I'm writing to express my strong interest in your React Developer position...`
-    },
-    {
-      id: 'prop-002',
-      title: 'UX/UI Designer for Mobile App',
-      platform: 'Freelancer',
-      client: 'AppWorks Studio',
-      date: '2023-05-24',
-      status: 'Won',
-      statusColor: 'bg-green-100 text-green-800',
-      budget: '$1,500 - $2,500',
-      excerpt: 'As a UX/UI designer with 5+ years of experience creating intuitive mobile interfaces...'
-    },
-    {
-      id: 'prop-003',
-      title: 'WordPress Website Development',
-      platform: 'Fiverr',
-      client: 'Local Business',
-      date: '2023-05-22',
-      status: 'Rejected',
-      statusColor: 'bg-red-100 text-red-800',
-      budget: '$800 - $1,200',
-      excerpt: `I noticed your request for a WordPress website developer and I'm confident I can deliver...`
-    },
-    {
-      id: 'prop-004',
-      title: 'Content Writing for SaaS Blog',
-      platform: 'Upwork',
-      client: 'SaaS Growth Co.',
-      date: '2023-05-20',
-      status: 'Draft',
-      statusColor: 'bg-gray-100 text-gray-800',
-      budget: '$500 - $800',
-      excerpt: 'With my background in SaaS marketing and content strategy, I can help you create...'
-    },
-    {
-      id: 'prop-005',
-      title: 'Social Media Marketing Campaign',
-      platform: 'LinkedIn',
-      client: 'Fashion Brand',
-      date: '2023-05-18',
-      status: 'Won',
-      statusColor: 'bg-green-100 text-green-800',
-      budget: '$1,800 - $2,200',
-      excerpt: `I've helped several fashion brands increase their social media engagement by over 200%...`
-    },
-    {
-      id: 'prop-006',
-      title: 'Logo Design for Tech Startup',
-      platform: 'Dribbble',
-      client: 'AI Startup',
-      date: '2023-05-15',
-      status: 'Submitted',
-      statusColor: 'bg-blue-100 text-blue-800',
-      budget: '$400 - $600',
-      excerpt: 'I specialize in creating modern, memorable logos for tech companies that convey...'
+  const { proposals, last_updated } = useSelector((state) => state.proposals);
+  
+  // Ensure proposals is always an array
+  const proposalsArray = Array.isArray(proposals) ? proposals : (proposals ? [proposals] : []);
+  
+  // Function to check if data needs to be refreshed (older than 3 hours)
+  const needsRefresh = () => {
+    if (!last_updated) return true;
+    
+    const lastUpdatedTime = new Date(last_updated).getTime();
+    const currentTime = new Date().getTime();
+    const threeHoursInMs = 3 * 60 * 60 * 1000; // 3 hours in milliseconds
+    
+    return (currentTime - lastUpdatedTime) > threeHoursInMs;
+  };
+  
+  // Function to fetch proposals from the backend
+  const fetchProposals = async (forceRefresh = false) => {
+    // If we have proposals and they're recent enough, use the cached data
+    if (!forceRefresh && proposalsArray.length > 0 && !needsRefresh()) {
+      return;
     }
-  ];
+    
+    if (forceRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+    
+    try {
+      const response = await ProposalAPI.get_proposals();
+      
+      if (response.status === 'success' && response.proposals) {
+        // Update Redux store with fresh data from the API
+        dispatch(setProposals(response.proposals));
+        console.log(response.proposals);
+        
+        if (forceRefresh) {
+          toast.success('Proposals refreshed successfully');
+        }
+      } else {
+        toast.error('Failed to load proposals');
+      }
+    } catch (error) {
+      console.error('Error fetching proposals:', error);
+      toast.error(error.message || 'Failed to load proposals');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+  
+  // Fetch proposals when component mounts or when needed
+  useEffect(() => {
+    fetchProposals();
+  }, []);
+  
+  // Manual refresh handler
+  const handleRefresh = () => {
+    fetchProposals(true);
+  };
 
-  // Filter and sort proposals
-  const filteredProposals = proposals
+  const filteredProposals = proposalsArray
     .filter(proposal => {
       // Filter by search term
-      const matchesSearch = proposal.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           proposal.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           proposal.platform.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = 
+        (proposal.job_description && proposal.job_description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (proposal.style && proposal.style.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (proposal.username && proposal.username.toLowerCase().includes(searchTerm.toLowerCase()));
       
       // Filter by status
-      const matchesStatus = filterStatus === 'all' || proposal.status.toLowerCase() === filterStatus.toLowerCase();
+      const matchesStatus = filterStatus === 'all' || 
+        (proposal.status && proposal.status.toLowerCase() === filterStatus.toLowerCase());
       
       return matchesSearch && matchesStatus;
     })
@@ -97,29 +97,51 @@ const AllProposals = () => {
       // Sort by selected field
       if (sortBy === 'date') {
         return sortOrder === 'asc' 
-          ? new Date(a.date) - new Date(b.date)
-          : new Date(b.date) - new Date(a.date);
-      } else if (sortBy === 'title') {
+          ? new Date(a.created_at || 0) - new Date(b.created_at || 0)
+          : new Date(b.created_at || 0) - new Date(a.created_at || 0);
+      } else if (sortBy === 'style') {
         return sortOrder === 'asc'
-          ? a.title.localeCompare(b.title)
-          : b.title.localeCompare(a.title);
-      } else if (sortBy === 'platform') {
+          ? (a.style || '').localeCompare(b.style || '')
+          : (b.style || '').localeCompare(a.style || '');
+      } else if (sortBy === 'status') {
         return sortOrder === 'asc'
-          ? a.platform.localeCompare(b.platform)
-          : b.platform.localeCompare(a.platform);
+          ? (a.status || '').localeCompare(b.status || '')
+          : (b.status || '').localeCompare(a.status || '');
       }
       return 0;
     });
 
   // Format date for display
   const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
     const options = { year: 'numeric', month: 'short', day: 'numeric' };
     return new Date(dateString).toLocaleDateString(undefined, options);
+  };
+  
+  // Get color for status badge
+  const getStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'sent':
+        return 'bg-blue-100 text-blue-800';
+      case 'accepted':
+        return 'bg-green-100 text-green-800';
+      case 'rejected':
+        return 'bg-red-100 text-red-800';
+      case 'generated':
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
   };
 
   // Toggle sort order
   const toggleSortOrder = () => {
     setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+  };
+  
+  // Calculate word count from proposal text
+  const getWordCount = (text) => {
+    if (!text) return 0;
+    return text.trim().split(/\s+/).length;
   };
 
   return (
@@ -131,9 +153,34 @@ const AllProposals = () => {
             <h1 className="text-2xl font-bold text-gray-800">All Proposals</h1>
             <p className="mt-1 text-gray-600">
               Manage and track all your proposals in one place
+              {last_updated && (
+                <span className="text-xs text-gray-400 ml-2">
+                  Last updated: {formatDate(last_updated)}
+                </span>
+              )}
             </p>
           </div>
-          <div className="mt-4 md:mt-0">
+          <div className="mt-4 md:mt-0 flex space-x-3">
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {refreshing ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Refreshing...
+                </>
+              ) : (
+                <>
+                  <FiRefreshCw className="-ml-1 mr-2 h-4 w-4" />
+                  Refresh
+                </>
+              )}
+            </button>
             <Link
               to="/dashboard/proposals/generate"
               className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
@@ -264,87 +311,138 @@ const AllProposals = () => {
         </div>
 
         {/* Proposals list */}
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Proposal
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Platform
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Budget
-                </th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredProposals.length > 0 ? (
-                filteredProposals.map((proposal) => (
-                  <tr key={proposal.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            <Link to={`/dashboard/proposals/${proposal.id}`} className="hover:text-emerald-600">
-                              {proposal.title}
-                            </Link>
-                          </div>
-                          <div className="text-sm text-gray-500">{proposal.client}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{proposal.platform}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{formatDate(proposal.date)}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${proposal.statusColor}`}>
-                        {proposal.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {proposal.budget}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end space-x-2">
-                        <button className="text-gray-400 hover:text-emerald-600" title="Copy">
-                          <FiCopy className="h-4 w-4" />
-                        </button>
-                        <button className="text-gray-400 hover:text-emerald-600" title="Download">
-                          <FiDownload className="h-4 w-4" />
-                        </button>
-                        <Link to={`/dashboard/proposals/edit/${proposal.id}`} className="text-gray-400 hover:text-emerald-600" title="Edit">
-                          <FiEdit2 className="h-4 w-4" />
-                        </Link>
-                        <button className="text-gray-400 hover:text-red-600" title="Delete">
-                          <FiTrash2 className="h-4 w-4" />
-                        </button>
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                    onClick={() => {
+                      setSortBy('date');
+                      toggleSortOrder();
+                    }}
+                  >
+                    <div className="flex items-center">
+                      Date
+                      {sortBy === 'date' && (
+                        <span className="ml-1">
+                          {sortOrder === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                    onClick={() => {
+                      setSortBy('style');
+                      toggleSortOrder();
+                    }}
+                  >
+                    <div className="flex items-center">
+                      Style
+                      {sortBy === 'style' && (
+                        <span className="ml-1">
+                          {sortOrder === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                    onClick={() => {
+                      setSortBy('status');
+                      toggleSortOrder();
+                    }}
+                  >
+                    <div className="flex items-center">
+                      Status
+                      {sortBy === 'status' && (
+                        <span className="ml-1">
+                          {sortOrder === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Job Description
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Length
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {loading ? (
+                  // Loading state
+                  <tr>
+                    <td colSpan={6} className="px-6 py-10 text-center">
+                      <div className="flex justify-center items-center space-x-2">
+                        <svg className="animate-spin h-5 w-5 text-emerald-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span className="text-sm font-medium text-gray-500">Loading proposals...</span>
                       </div>
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={6} className="px-6 py-10 text-center text-sm text-gray-500">
-                    No proposals found matching your filters.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                ) : filteredProposals.length > 0 ? (
+                  filteredProposals.map((proposal) => (
+                    <tr key={proposal.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {formatDate(proposal.created_at)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {proposal.style || 'Default'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(proposal.status)}`}>
+                          {proposal.status || 'Generated'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
+                        {proposal.job_description ? proposal.job_description.substring(0, 100) + '...' : 'No description'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {proposal.proposal_text ? getWordCount(proposal.proposal_text) + ' words' : 'N/A'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex items-center justify-end space-x-2">
+                          <Link to={`/dashboard/proposals/view/${proposal.id}`} className="text-gray-400 hover:text-blue-600" title="View Details">
+                            <FiEye className="h-4 w-4" />
+                          </Link>
+                          <button className="text-gray-400 hover:text-emerald-600" title="Copy">
+                            <FiCopy className="h-4 w-4" />
+                          </button>
+                          <button className="text-gray-400 hover:text-emerald-600" title="Download">
+                            <FiDownload className="h-4 w-4" />
+                          </button>
+                          <button className="text-gray-400 hover:text-emerald-600" title="Edit">
+                            <FiEdit2 className="h-4 w-4" />
+                          </button>
+                          <button className="text-gray-400 hover:text-red-600" title="Delete">
+                            <FiTrash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-10 text-center text-sm text-gray-500">
+                      {proposalsArray.length === 0 ? 'No proposals found. Create your first proposal!' : 'No proposals found matching your filters.'}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* Pagination */}

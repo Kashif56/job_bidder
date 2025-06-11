@@ -21,10 +21,13 @@ import DashboardLayout from './components/dashboard/DashboardLayout';
 import Dashboard from './pages/dashboard/Dashboard';
 import FreelanceProfile from './pages/dashboard/FreelanceProfile';
 import Projects from './pages/dashboard/Projects';
+import AddProject from './pages/dashboard/projects/AddProject';
+import EditProject from './pages/dashboard/projects/EditProject';
 
 // Proposal Pages
 import GenerateProposal from './pages/dashboard/proposals/GenerateProposal';
 import AllProposals from './pages/dashboard/proposals/AllProposals';
+import ViewProposal from './pages/dashboard/proposals/ViewProposal';
 
 
 // Redux
@@ -55,10 +58,13 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path="profile" element={<FreelanceProfile />} />
             <Route path="projects" element={<Projects />} />
+            <Route path="projects/add" element={<AddProject />} />
+            <Route path="projects/edit/:projectId" element={<EditProject />} />
             <Route path="proposals">
               <Route index element={<Navigate to="/dashboard/proposals/all" replace />} />
               <Route path="generate" element={<GenerateProposal />} />
               <Route path="all" element={<AllProposals />} />
+              <Route path="view/:proposalId" element={<ViewProposal />} />
             </Route>
           </Route>
           

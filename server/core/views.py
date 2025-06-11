@@ -237,3 +237,110 @@ def update_freelancer_profile(request):
             'status': 'error',
             'message': f'An error occurred: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+
+
+
+# Projects
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_project(request):
+    try:
+        data = request.data
+        project = Projects.objects.create(
+            user=request.user,
+            title=data['title'],
+            description=data['description'],
+            budget=data.get('budget', 0),
+            platform=data['platform'],
+            status=data['status'],
+            start_date=data['start_date'],
+            end_date=data['end_date']
+        )
+        serializer = ProjectsSerializer(project)
+        return Response({
+            'status': 'success',
+            'message': 'Project created successfully',
+            'data': serializer.data
+        }, status=status.HTTP_201_CREATED)
+    except Exception as e:
+        print(f"Error in create_project: {str(e)}")
+        return Response({
+            'status': 'error',
+            'message': f'An error occurred: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_projects(request):
+    try:
+        projects = Projects.objects.filter(user=request.user)
+        serializer = ProjectsSerializer(projects, many=True)
+        return Response({
+            'status': 'success',
+            'data': serializer.data
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        print(f"Error in get_projects: {str(e)}")
+        return Response({
+            'status': 'error',
+            'message': f'An error occurred: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_project(request, project_id):
+    try:
+        project = Projects.objects.get(id=project_id, user=request.user)
+        data = request.data
+        project.title = data.get('title', project.title)
+        project.description = data.get('description', project.description)
+        project.budget = data.get('budget', project.budget)
+        project.platform = data.get('platform', project.platform)
+        project.status = data.get('status', project.status)
+        project.save()
+        serializer = ProjectsSerializer(project)
+        return Response({
+            'status': 'success',
+            'message': 'Project updated successfully',
+            'data': serializer.data
+        }, status=status.HTTP_200_OK)
+    except Projects.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': 'Project not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        print(f"Error in update_project: {str(e)}")
+        return Response({
+            'status': 'error',
+            'message': f'An error occurred: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['DELETE', 'GET'])
+@permission_classes([IsAuthenticated])
+def del_project(request, project_id):
+    try:
+        project = Projects.objects.get(id=project_id)
+        if project.user == request.user:
+            project.delete()
+
+            return Response({
+                'status': 'success',
+                'message': "Project is deleted Successfully"
+            })
+        
+        return Response({
+            'status': 'error',
+            'message': "You dont have access to delete this Project"
+        })
+    
+    except Projects.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': "No Project Found"
+        })

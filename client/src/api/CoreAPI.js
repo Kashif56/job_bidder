@@ -74,6 +74,56 @@ const CoreAPI = {
             console.error('API Error:', error);
             throw error.response?.data || { error: 'Failed to get experiences' };
         }
+    },
+
+    create_project: async (projectData) => {
+        try {
+            const response = await axiosInstance.post('/create_project/', projectData);
+            return response.data;
+        } catch (error) {
+            console.error('API Error:', error);
+            throw error.response?.data || { error: 'Failed to create project' };
+        }
+    },
+
+    get_projects: async () => {
+        try {
+            const response = await axiosInstance.get('/get_projects/');
+            return response.data;
+        } catch (error) {
+            console.error('API Error:', error);
+            throw error.response?.data || { error: 'Failed to get projects' };
+        }
+    },
+
+    get_project: async (projectId) => {
+        try {
+            const response = await axiosInstance.get(`/get_project/${projectId}/`);
+            return response.data;
+        } catch (error) {
+            console.error('API Error:', error);
+            throw error.response?.data || { error: 'Failed to get project' };
+        }
+    },
+
+    update_project: async (projectId, projectData) => {
+        try {
+            const response = await axiosInstance.put(`/update_project/${projectId}/`, projectData);
+            return response.data;
+        } catch (error) {
+            console.error('API Error:', error);
+            throw error.response?.data || { error: 'Failed to update project' };
+        }
+    },
+
+    delete_project: async (project_id) => {
+        try {
+            const response = await axiosInstance.get(`/delete_project/${project_id}/`);
+            return response.data;
+        } catch (error) {
+            console.error('API Error:', error);
+            throw error.response?.data || { error: 'Failed to get project' };
+        }
     }
 }
 

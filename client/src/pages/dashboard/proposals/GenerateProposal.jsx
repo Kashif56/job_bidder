@@ -1,465 +1,462 @@
-import { useState, useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { FiCopy, FiDownload, FiRefreshCw, FiSave, FiSend, FiMessageSquare, FiUser, FiSettings } from 'react-icons/fi';
+import React, { useState, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useDispatch } from "react-redux";
+import ProposalAPI from "../../../api/ProposalAPI";
+import { FiCheck, FiRefreshCw, FiChevronRight, FiLoader } from "react-icons/fi";
+import { addProposal } from "../../../redux/slices/ProposalSlice";
 
 const GenerateProposal = () => {
-  // Chat messages state
-  const [messages, setMessages] = useState([]);
+  const dispatch = useDispatch();
+  const [jobDescription, setJobDescription] = useState("");
+  const [currentStep, setCurrentStep] = useState(0);
+  const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState(null);
   
-  // Form states
-  const [jobDescription, setJobDescription] = useState('');
-  const [tone, setTone] = useState('professional');
-  const [length, setLength] = useState('medium');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedProposal, setGeneratedProposal] = useState('');
-  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [conversationStarted, setConversationStarted] = useState(false);
+  // State for each step result
+  const [matchAnalysis, setMatchAnalysis] = useState(null);
+  const [painPoints, setPainPoints] = useState(null);
+  const [generatedProposal, setGeneratedProposal] = useState(null);
+  const [humanizedProposal, setHumanizedProposal] = useState(null);
   
-  // Ref for auto-scrolling chat
-  const messagesEndRef = useRef(null);
+  // Refs for scrolling
+  const resultsRef = useRef(null);
 
-  // Sample tone options
-  const toneOptions = [
-    { value: 'professional', label: 'Professional' },
-    { value: 'friendly', label: 'Friendly' },
-    { value: 'confident', label: 'Confident' },
-    { value: 'enthusiastic', label: 'Enthusiastic' },
-    { value: 'formal', label: 'Formal' }
-  ];
-
-  // Sample length options
-  const lengthOptions = [
-    { value: 'short', label: 'Short (150-200 words)' },
-    { value: 'medium', label: 'Medium (250-350 words)' },
-    { value: 'long', label: 'Long (400-500 words)' }
-  ];
-
-  // Scroll to bottom of chat when messages change
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { 
+        when: "beforeChildren",
+        staggerChildren: 0.3
+      }
+    }
+  };
+  
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { type: "spring", stiffness: 100 }
+    }
   };
 
-  // Handle form submission
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    
+  const pulseAnimation = {
+    scale: [1, 1.05, 1],
+    opacity: [0.7, 1, 0.7],
+    transition: { 
+      repeat: Infinity, 
+      duration: 1.5 
+    }
+  };
+
+  const scrollToResults = () => {
+    resultsRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const resetForm = () => {
+    setCurrentStep(0);
+    setMatchAnalysis(null);
+    setPainPoints(null);
+    setGeneratedProposal(null);
+    setHumanizedProposal(null);
+    setError(null);
+  };
+
+  // Step 1: Analyze job match
+  const handleAnalyzeMatch = async () => {
     if (!jobDescription.trim()) {
-      return; // Don't proceed if job description is empty
+      setError("Please enter a job description first");
+      return;
     }
     
-    // Set conversation as started if this is the first message
-    if (!conversationStarted) {
-      setConversationStarted(true);
+    setProcessing(true);
+    setError(null);
+    
+    try {
+      const response = await ProposalAPI.analyze_job_match(jobDescription);
+      console.log("Job match analysis response:", response); // Debug log
       
-      // Add initial system message
-      const systemMessage = {
-        id: 1,
-        role: 'system',
-        content: 'Hello! I can help you generate a proposal for your job application. I\'ll create a customized proposal based on the job description you provide.'
-      };
-      
-      setMessages(prev => [...prev, systemMessage]);
-    }
-    
-    // Add user message to chat
-    const userMessage = {
-      id: messages.length + 1,
-      role: 'user',
-      content: jobDescription
-    };
-    
-    setMessages(prev => [...prev, userMessage]);
-    setIsGenerating(true);
-    
-    // Add a loading message
-    const loadingMessage = {
-      id: messages.length + 2,
-      role: 'assistant',
-      content: 'Generating your proposal...',
-      isLoading: true
-    };
-    
-    setMessages(prev => [...prev, loadingMessage]);
-    
-    // Simulate API call with progressive loading
-    let progress = 0;
-    const progressInterval = setInterval(() => {
-      progress += 10;
-      if (progress >= 100) {
-        clearInterval(progressInterval);
+      // Extract data from the nested 'analysis' object in the response
+      if (response && response.status === "success" && response.analysis) {
+        const analysisData = response.analysis;
         
-        // Generate a more personalized proposal based on the job description
-        const customProposal = generateCustomProposal(jobDescription, tone, length);
-        setGeneratedProposal(customProposal);
+        // Set match analysis with proper data structure, mapping API fields to our component's expected fields
+        setMatchAnalysis({
+          match_percentage: analysisData.match_score || 0,
+          strengths: analysisData.strengths || [],
+          improvement_areas: analysisData.gaps || [],
+          recommendation: analysisData.recommendation || "",
+          strategy: analysisData.strategy || ""
+        });
         
-        // Replace loading message with generated proposal
-        const assistantMessage = {
-          id: messages.length + 2,
-          role: 'assistant',
-          content: customProposal
-        };
-        
-        setMessages(prev => prev.map(msg => 
-          msg.isLoading ? assistantMessage : msg
-        ));
-        
-        setIsGenerating(false);
-        setJobDescription(''); // Clear input for next message
+        setCurrentStep(1);
+        scrollToResults();
+      } else {
+        throw new Error("Invalid response format from API");
       }
-    }, 200); // Update progress every 200ms for a total of ~2 seconds
-  };
-  
-  // Generate a custom proposal based on job description and settings
-  const generateCustomProposal = (description, toneStyle, lengthStyle) => {
-    // Extract keywords from job description
-    const techKeywords = ['React', 'JavaScript', 'TypeScript', 'Node.js', 'API', 'Redux', 'CSS', 'HTML', 'frontend', 'backend', 'full-stack', 'UI/UX', 'responsive', 'mobile', 'web'];
-    const extractedKeywords = techKeywords.filter(keyword => 
-      description.toLowerCase().includes(keyword.toLowerCase())
-    );
-    
-    // Determine job type
-    let jobType = 'web development';
-    if (description.toLowerCase().includes('design')) jobType = 'web design';
-    if (description.toLowerCase().includes('mobile')) jobType = 'mobile app development';
-    if (description.toLowerCase().includes('backend') || description.toLowerCase().includes('api')) jobType = 'backend development';
-    
-    // Adjust tone based on selection
-    let greeting = 'Dear Hiring Manager,';
-    let closingLine = 'I look forward to discussing this opportunity further.';
-    
-    switch(toneStyle) {
-      case 'friendly':
-        greeting = 'Hi there!';
-        closingLine = `I'd love to chat more about how I can help with your project!`;
-        break;
-      case 'confident':
-        greeting = 'Dear Hiring Team,';
-        closingLine = `I'm confident I can deliver exceptional results for your project.`;
-        break;
-      case 'enthusiastic':
-        greeting = 'Hello!';
-        closingLine = `I'm incredibly excited about this opportunity and can't wait to potentially work together!`;
-        break;
-      case 'formal':
-        greeting = 'To Whom It May Concern,';
-        closingLine = 'I appreciate your consideration and look forward to your response.';
-        break;
-      default: // professional
-        break;
+    } catch (err) {
+      console.error("Match analysis error:", err);
+      setError(err.message || "Failed to analyze job match");
+    } finally {
+      setProcessing(false);
     }
-    
-    // Adjust length based on selection
-    let detailLevel = '';
-    let experienceSection = 'I have over 5 years of experience building modern web applications using ' + 
-      (extractedKeywords.length > 0 ? extractedKeywords.join(', ') : 'various frontend and backend technologies') + 
-      '.';
-    
-    switch(lengthStyle) {
-      case 'short':
-        detailLevel = 'brief';
-        break;
-      case 'long':
-        detailLevel = 'comprehensive';
-        experienceSection += ' My expertise includes:\n\n' +
-          '- Building responsive, user-friendly interfaces that enhance user experience\n' +
-          '- Developing scalable backend solutions with secure API endpoints\n' +
-          '- Implementing state management solutions for complex applications\n' +
-          '- Optimizing application performance and load times\n' +
-          '- Writing clean, maintainable code with comprehensive test coverage';
-        break;
-      default: // medium
-        detailLevel = 'detailed';
-        break;
-    }
-    
-    // Construct the proposal
-    return `${greeting}\n\nI'm writing to express my strong interest in your ${jobType} position. ${experienceSection}\n\nBased on your job description, I understand you're looking for someone with expertise in ${extractedKeywords.length > 0 ? extractedKeywords.join(', ') : 'web development technologies'}. I've successfully delivered similar projects, including:\n\n- A ${detailLevel} e-commerce platform with advanced filtering that increased conversion by 32%\n- Custom API integration with third-party services that streamlined operations\n- Responsive designs that work flawlessly across all devices\n\nMy approach combines clean, maintainable code with performance optimization techniques to ensure fast loading times and smooth user experiences.\n\n${closingLine}\n\nBest regards,\n[Your Name]`;
   };
 
-  // Handle copy to clipboard
-  const handleCopy = (text = generatedProposal) => {
-    navigator.clipboard.writeText(text);
-    setShowSuccessMessage(true);
-    setTimeout(() => setShowSuccessMessage(false), 3000);
-  };
-  
-  // Handle save proposal
-  const handleSave = () => {
-    // In a real app, this would save to a database
-    setShowSuccessMessage(true);
-    setTimeout(() => setShowSuccessMessage(false), 3000);
-  };
-  
-  // Handle regenerate proposal
-  const handleRegenerate = () => {
-    if (isGenerating) return;
+  // Step 2-4: Continue with automated steps
+  const handleContinue = async () => {
+    setProcessing(true);
+    setError(null);
     
-    setIsGenerating(true);
-    
-    // Add a system message about regenerating
-    const systemMessage = {
-      id: messages.length + 1,
-      role: 'system',
-      content: 'Regenerating proposal with the same parameters...'
-    };
-    
-    setMessages(prev => [...prev, systemMessage]);
-    
-    // Add a loading message
-    const loadingMessage = {
-      id: messages.length + 2,
-      role: 'assistant',
-      content: 'Generating your proposal...',
-      isLoading: true
-    };
-    
-    setMessages(prev => [...prev, loadingMessage]);
-    
-    setTimeout(() => {
-      // Generate a slightly different proposal
-      const customProposal = generateCustomProposal(
-        messages.find(m => m.role === 'user')?.content || '', 
-        tone, 
-        length
+    try {
+      // Step 2: Analyze pain points
+      setCurrentStep(2);
+      const painPointsResponse = await ProposalAPI.analyze_pain_points(jobDescription);
+      console.log("Pain points response:", painPointsResponse);
+      
+      // Properly structure pain points data
+      const painPointsData = {
+        pain_points: painPointsResponse.analysis.pain_points || []
+      };
+      setPainPoints(painPointsData);
+      scrollToResults();
+      
+      // Step 3: Generate proposal
+      setCurrentStep(3);
+      // Ensure we have an array of pain points to send
+      const painPointsArray = painPointsData.pain_points;
+      console.log("Sending pain points to proposal generation:", painPointsArray);
+      
+      const proposalResult = await ProposalAPI.generate_targeted_proposal(
+        jobDescription, 
+        painPointsArray,
+        matchAnalysis.strategy
       );
-      setGeneratedProposal(customProposal);
+      console.log("Proposal generation response:", proposalResult);
+      setGeneratedProposal(proposalResult);
+      scrollToResults();
       
-      // Replace loading message with generated proposal
-      const assistantMessage = {
-        id: messages.length + 2,
-        role: 'assistant',
-        content: customProposal
+      // Step 4: Humanize proposal
+      setCurrentStep(4);
+      const humanizedResult = await ProposalAPI.humanize_proposal(
+        proposalResult.proposal,
+        jobDescription
+      );
+      console.log("Humanized proposal response:", humanizedResult);
+      setHumanizedProposal(humanizedResult);
+      
+      // Create a new proposal object to add to Redux store
+      const newProposal = {
+        id: humanizedResult.proposal_id,
+        job_description: jobDescription,
+        proposal_text: proposalResult.proposal,
+        humanized_text: humanizedResult.proposal,
+        created_at: new Date().toISOString(),
+        match_score: matchAnalysis?.match_score || 0
       };
       
-      setMessages(prev => prev.map(msg => 
-        msg.isLoading ? assistantMessage : msg
-      ));
+      // Update Redux store with the new proposal
+      dispatch(addProposal(newProposal));
+      console.log("Added proposal to Redux store:", newProposal);
       
-      setIsGenerating(false);
-    }, 2000);
+      scrollToResults();
+      
+    } catch (err) {
+      console.error("Proposal generation error:", err);
+      setError(err.message || "An error occurred during proposal generation");
+    } finally {
+      setProcessing(false);
+    }
   };
-  
-  // Toggle settings panel
-  const toggleSettings = () => {
-    setShowSettings(!showSettings);
+
+  // Render the magic animation for the current processing step
+  const renderMagicAnimation = () => {
+    return (
+      <motion.div 
+        className="flex flex-col items-center justify-center py-10"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+      >
+        <motion.div 
+          className="w-20 h-20 rounded-full bg-gradient-to-r from-purple-500 to-indigo-600 flex items-center justify-center"
+          animate={pulseAnimation}
+        >
+          <FiLoader className="text-white text-2xl animate-spin" />
+        </motion.div>
+        <motion.p 
+          className="mt-4 text-lg text-gray-700 font-medium"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1, transition: { delay: 0.3 } }}
+        >
+          {currentStep === 1 ? "Analyzing job match..." :
+           currentStep === 2 ? "Identifying pain points..." :
+           currentStep === 3 ? "Crafting your proposal..." :
+           "Adding human touch to your proposal..."}
+        </motion.p>
+      </motion.div>
+    );
   };
 
-  // Add an effect to prevent body scrolling and add custom scrollbar styles
-  useEffect(() => {
-    // Disable scrolling on body
-    document.body.style.overflow = 'hidden';
+  // Render the match analysis result
+  const renderMatchAnalysis = () => {
+    if (!matchAnalysis) return null;
     
-    // Add custom scrollbar style to hide scrollbars while maintaining functionality
-    const style = document.createElement('style');
-    style.textContent = `
-      .no-scrollbar::-webkit-scrollbar {
-        display: none;
-      }
-      .no-scrollbar {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-      }
-    `;
-    document.head.appendChild(style);
-    
-    // Cleanup function to restore scrolling when component unmounts
-    return () => {
-      document.body.style.overflow = 'auto';
-      document.head.removeChild(style);
-    };
-  }, []);
-  
-  return (
-    <div className="flex flex-col h-screen bg-gray-50 overflow-hidden relative">
-      <div className="max-w-3xl mx-auto w-full h-full flex flex-col">
-        {/* No header */}
-
-        {/* Settings panel will be moved below */}
-
-        {/* Main content - takes full height */}
-        <main className="flex-1 flex flex-col overflow-hidden">
-          {/* Chat messages area - only this part scrolls */}
-          <div className="flex-1 overflow-y-auto pb-32 no-scrollbar"> {/* Added padding to bottom to ensure messages aren't hidden behind input */}
-          {conversationStarted ? (
-            /* Messages when conversation has started */
-            <div className="p-4 space-y-4">
-              {messages.map((message) => (
-                <div 
-                  key={message.id} 
-                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div 
-                    className={`max-w-3/4 rounded-lg p-3 ${message.role === 'user' 
-                      ? 'bg-emerald-600 text-white' 
-                      : message.role === 'system' 
-                        ? 'bg-gray-200 text-gray-700' 
-                        : 'bg-white border border-gray-200 text-gray-800 shadow-sm'}`}
-                  >
-                    {message.isLoading ? (
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse"></div>
-                        <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse delay-150"></div>
-                        <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse delay-300"></div>
-                        <span className="text-gray-500 ml-1">{message.content}</span>
-                      </div>
-                    ) : (
-                      <div className="whitespace-pre-line">{message.content}</div>
-                    )}
-                    
-                    {message.role === 'assistant' && !message.isLoading && (
-                      <div className="mt-2 pt-2 border-t border-gray-100 flex justify-end space-x-2">
-                        <button 
-                          onClick={() => handleCopy(message.content)}
-                          className="text-xs text-gray-500 hover:text-emerald-600"
-                        >
-                          <FiCopy className="inline mr-1" size={12} />
-                          Copy
-                        </button>
-                        <button 
-                          onClick={handleSave}
-                          className="text-xs text-gray-500 hover:text-emerald-600"
-                        >
-                          <FiSave className="inline mr-1" size={12} />
-                          Save
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-              <div ref={messagesEndRef} />
-            </div>
-          ) : (
-            /* Empty space when no conversation */
-            <div className="flex-1"></div>
-          )}
+    return (
+      <motion.div 
+        className="bg-white rounded-lg shadow-lg p-6 mb-6"
+        variants={itemVariants}
+      >
+        <h3 className="text-xl font-semibold mb-3 text-gray-800">Job Match Analysis</h3>
+        <div className="flex items-center mb-4">
+          <div className="w-full bg-gray-200 rounded-full h-4">
+            <motion.div 
+              className="h-4 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600"
+              initial={{ width: 0 }}
+              animate={{ width: `${matchAnalysis.match_percentage || 0}%` }}
+              transition={{ duration: 1 }}
+            />
+          </div>
+          <span className="ml-4 font-bold">{matchAnalysis.match_percentage || 0}%</span>
         </div>
         
-        {/* Input area - sticky at the bottom, centered initially */}
-        <div className={`w-full ${conversationStarted ? 'sticky bottom-0 left-0 right-0' : 'absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2'} z-10 bg-gray-50`}>
-          <div className="max-w-2xl mx-auto px-4">
-            {!conversationStarted && (
-              <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-800 mb-2">Generate Your Proposal</h2>
-                <p className="text-gray-600 mb-6">
-                  Paste a job description below and let AI create a personalized proposal for you.
-                </p>
+        {matchAnalysis.recommendation && (
+          <motion.div 
+            className="mt-4 p-3 bg-blue-50 rounded-md border border-blue-100"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <h4 className="font-medium text-blue-800 mb-1">Recommendation:</h4>
+            <p className="text-blue-700">{matchAnalysis.recommendation}</p>
+          </motion.div>
+        )}
+        
+        <div className="mt-4">
+          <h4 className="font-medium text-gray-700 mb-2">Key Strengths:</h4>
+          <ul className="list-disc pl-5 space-y-1">
+            {matchAnalysis.strengths?.map((strength, idx) => (
+              <motion.li 
+                key={idx} 
+                className="text-gray-600"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.1 }}
+              >
+                {strength}
+              </motion.li>
+            ))}
+          </ul>
+        </div>
+        
+        {matchAnalysis.improvement_areas?.length > 0 && (
+          <div className="mt-4">
+            <h4 className="font-medium text-gray-700 mb-2">Areas for Improvement:</h4>
+            <ul className="list-disc pl-5 space-y-1">
+              {matchAnalysis.improvement_areas.map((area, idx) => (
+                <motion.li 
+                  key={idx} 
+                  className="text-gray-600"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.1 + 0.3 }}
+                >
+                  {area}
+                </motion.li>
+              ))}
+            </ul>
+          </div>
+        )}
+        
+        {matchAnalysis.strategy && (
+          <motion.div 
+            className="mt-6 p-3 bg-green-50 rounded-md border border-green-100"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            <h4 className="font-medium text-green-800 mb-1">Strategy:</h4>
+            <p className="text-green-700">{matchAnalysis.strategy}</p>
+          </motion.div>
+        )}
+        
+        <div className="mt-6 flex space-x-4">
+          <button
+            onClick={handleContinue}
+            disabled={processing}
+            className="flex items-center px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+          >
+            Continue <FiChevronRight className="ml-2" />
+          </button>
+          
+          <button
+            onClick={resetForm}
+            className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Reset <FiRefreshCw className="ml-2 inline" />
+          </button>
+        </div>
+      </motion.div>
+    );
+  };
+
+  // Render pain points
+  const renderPainPoints = () => {
+    if (!painPoints) return null;
+    
+    return (
+      <motion.div 
+        className="bg-white rounded-lg shadow-lg p-6 mb-6"
+        variants={itemVariants}
+      >
+        <h3 className="text-xl font-semibold mb-4 text-gray-800">Identified Pain Points</h3>
+        <ul className="space-y-3">
+          {painPoints.pain_points?.map((point, idx) => (
+            <motion.li 
+              key={idx}
+              className="p-3 bg-indigo-50 rounded-md"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.15 }}
+            >
+              <div className="flex">
+                <span className="text-indigo-600 mr-2">•</span>
+                <span className="text-gray-700">{point}</span>
               </div>
-            )}
-            
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-              <form onSubmit={handleSubmit} className="flex flex-col">
-                <div className="flex items-center p-2">
-                  <input
-                    type="text"
-                    className="flex-1 px-4 py-3 border-0 bg-transparent placeholder-gray-400 focus:outline-none focus:ring-0"
-                    placeholder={conversationStarted ? "Ask a follow-up question..." : "Paste job description here..."}
-                    value={jobDescription}
-                    onChange={(e) => setJobDescription(e.target.value)}
-                    disabled={isGenerating}
-                  />
-                  <button
-                    type="submit"
-                    className="inline-flex items-center justify-center w-10 h-10 rounded-full text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
-                    disabled={isGenerating || !jobDescription.trim()}
-                  >
-                    {isGenerating ? (
-                      <FiRefreshCw className="animate-spin h-5 w-5" />
-                    ) : (
-                      <FiSend className="h-5 w-5" />
-                    )}
-                  </button>
-                </div>
-                
-                {/* Settings buttons below input */}
-                <div className="px-3 py-2 border-t border-gray-100 flex justify-between items-center text-xs text-gray-500">
-                  <div className="flex space-x-4">
-                    <button 
-                      type="button"
-                      onClick={toggleSettings}
-                      className="flex items-center hover:text-emerald-600"
-                    >
-                      <FiSettings className="mr-1" size={14} />
-                      {showSettings ? 'Hide settings' : 'Settings'}
-                    </button>
-                    <button 
-                      type="button"
-                      onClick={handleRegenerate}
-                      className="flex items-center hover:text-emerald-600"
-                      disabled={!conversationStarted || isGenerating}
-                    >
-                      <FiRefreshCw className="mr-1" size={14} />
-                      Regenerate
-                    </button>
-                  </div>
-                  <div className="text-xs text-gray-400">
-                    AI-powered proposal generator
-                  </div>
-                </div>
-                
-                {/* Settings panel */}
-                {showSettings && (
-                  <motion.div 
-                    className="border-t border-gray-100 bg-gray-50"
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label htmlFor="chat-tone" className="block text-sm font-medium text-gray-700 mb-1">
-                          Tone
-                        </label>
-                        <select
-                          id="chat-tone"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
-                          value={tone}
-                          onChange={(e) => setTone(e.target.value)}
-                        >
-                          {toneOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label htmlFor="chat-length" className="block text-sm font-medium text-gray-700 mb-1">
-                          Length
-                        </label>
-                        <select
-                          id="chat-length"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
-                          value={length}
-                          onChange={(e) => setLength(e.target.value)}
-                        >
-                          {lengthOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </form>
-            </div>
+            </motion.li>
+          ))}
+        </ul>
+        <div className="mt-4 text-sm text-gray-500 italic">
+          Addressing these pain points in your proposal will significantly increase your chances of winning this job.
+        </div>
+      </motion.div>
+    );
+  };
+
+  // Render generated proposal
+  const renderGeneratedProposal = () => {
+    if (!generatedProposal) return null;
+    
+    return (
+      <motion.div 
+        className="bg-white rounded-lg shadow-lg p-6 mb-6"
+        variants={itemVariants}
+      >
+        <h3 className="text-xl font-semibold mb-4 text-gray-800">Generated Proposal</h3>
+        <div className="prose prose-indigo max-w-none">
+          <div className="whitespace-pre-wrap text-gray-700 bg-gray-50 p-4 rounded-md border border-gray-200">
+            {generatedProposal.proposal}
           </div>
         </div>
-      </main>
-      
-      {/* Success message */}
-      {showSuccessMessage && (
-        <div className="fixed bottom-4 right-4 bg-emerald-600 text-white px-4 py-2 rounded-md shadow-lg">
-          Action completed successfully!
+      </motion.div>
+    );
+  };
+
+  // Render humanized proposal
+  const renderHumanizedProposal = () => {
+    if (!humanizedProposal) return null;
+    
+    return (
+      <motion.div 
+        className="bg-white rounded-lg shadow-lg p-6 mb-6"
+        variants={itemVariants}
+      >
+        <div className="flex items-center mb-4">
+          <div className="bg-green-100 p-2 rounded-full">
+            <FiCheck className="text-green-600 text-xl" />
+          </div>
+          <h3 className="text-xl font-semibold ml-3 text-gray-800">Final Humanized Proposal</h3>
         </div>
-      )}
+        
+        <div className="prose prose-indigo max-w-none">
+          <div className="whitespace-pre-wrap text-gray-700 bg-gray-50 p-4 rounded-md border border-gray-200">
+            {humanizedProposal.proposal}
+          </div>
+        </div>
+        
+        <div className="mt-6 flex justify-between">
+          <button
+            onClick={resetForm}
+            className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            New Proposal <FiRefreshCw className="ml-2 inline" />
+          </button>
+          
+          <button
+            className="flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            Save Proposal <FiCheck className="ml-2" />
+          </button>
+        </div>
+      </motion.div>
+    );
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto p-4 pb-20">
+      <h1 className="text-3xl font-bold mb-2 text-gray-800">Generate Proposal</h1>
+      <p className="text-gray-600 mb-8">
+        Enter the job description to generate a targeted proposal that wins you clients
+      </p>
+      
+      {/* Job description input */}
+      <div className="bg-white p-6 rounded-lg shadow-md mb-8">
+        <label className="block text-gray-700 font-medium mb-2">
+          Job Description
+        </label>
+        <textarea
+          className="w-full h-40 p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          placeholder="Paste the job description here..."
+          value={jobDescription}
+          onChange={(e) => setJobDescription(e.target.value)}
+          disabled={processing || currentStep > 0}
+        />
+        
+        {error && (
+          <div className="mt-2 text-red-600">{error}</div>
+        )}
+        
+        <div className="mt-4">
+          <button
+            onClick={handleAnalyzeMatch}
+            disabled={processing || !jobDescription.trim() || currentStep > 0}
+            className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+          >
+            {processing && currentStep === 0 ? (
+              <>Analyzing... <FiLoader className="ml-2 animate-spin inline" /></>
+            ) : (
+              "Check Match Analysis"
+            )}
+          </button>
+        </div>
+      </div>
+      
+      {/* Results section */}
+      <div ref={resultsRef}>
+        <AnimatePresence>
+          {processing && (
+            renderMagicAnimation()
+          )}
+        </AnimatePresence>
+        
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          {/* Step 1: Match Analysis */}
+          {currentStep >= 1 && !processing && renderMatchAnalysis()}
+          
+          {/* Step 2: Pain Points */}
+          {currentStep >= 2 && !processing && renderPainPoints()}
+          
+          {/* Step 3: Generated Proposal */}
+          {currentStep >= 3 && !processing && renderGeneratedProposal()}
+          
+          {/* Step 4: Humanized Proposal */}
+          {currentStep >= 4 && !processing && renderHumanizedProposal()}
+        </motion.div>
       </div>
     </div>
   );

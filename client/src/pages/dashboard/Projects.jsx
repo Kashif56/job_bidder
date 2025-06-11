@@ -1,83 +1,69 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { FiPlus, FiEdit2, FiTrash2, FiExternalLink, FiFileText, FiClock, FiDollarSign } from 'react-icons/fi';
 import { motion } from 'framer-motion';
+import CoreAPI from '../../api/CoreAPI';
+import {toast} from 'react-toastify'
+
+import { useSelector, useDispatch } from 'react-redux';
+import { setProjects, addProject, updateProject, removeProject, setLoading, setError } from '../../redux/slices/ProjectsSlice';
+
 
 const Projects = () => {
-  const [activeTab, setActiveTab] = useState('active');
+  const [activeTab, setActiveTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState(null);
-
-  // Sample project data
-  const projects = [
-    {
-      id: 'proj-001',
-      title: 'E-commerce Website Redesign',
-      client: 'Fashion Boutique',
-      status: 'active',
-      startDate: '2023-04-15',
-      endDate: '2023-06-30',
-      budget: '$4,500',
-      description: 'Redesign of an existing e-commerce website to improve user experience and increase conversion rates.',
-      progress: 65,
-      platform: 'Upwork',
-      proposalId: 'prop-002'
-    },
-    {
-      id: 'proj-002',
-      title: 'Mobile App Development',
-      client: 'Health Tech Startup',
-      status: 'active',
-      startDate: '2023-03-10',
-      endDate: '2023-07-15',
-      budget: '$8,000',
-      description: 'Development of a mobile app for tracking health metrics and providing personalized recommendations.',
-      progress: 40,
-      platform: 'Freelancer',
-      proposalId: 'prop-005'
-    },
-    {
-      id: 'proj-003',
-      title: 'Content Marketing Strategy',
-      client: 'SaaS Company',
-      status: 'completed',
-      startDate: '2023-01-05',
-      endDate: '2023-03-20',
-      budget: '$3,200',
-      description: 'Development and implementation of a content marketing strategy to increase brand awareness and generate leads.',
-      progress: 100,
-      platform: 'Direct Client',
-      proposalId: null
-    },
-    {
-      id: 'proj-004',
-      title: 'WordPress Website Development',
-      client: 'Local Restaurant',
-      status: 'completed',
-      startDate: '2022-11-10',
-      endDate: '2022-12-15',
-      budget: '$1,800',
-      description: 'Design and development of a WordPress website with online ordering functionality.',
-      progress: 100,
-      platform: 'Fiverr',
-      proposalId: 'prop-001'
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  
+  // Get projects from Redux state
+  const { projects, loading, error, last_updated } = useSelector(state => state.projects);
+  
+  
+  // Fetch projects if not available in Redux state
+  useEffect(() => {
+    const shouldFetchData = !projects.length || !last_updated;
+    
+    if (shouldFetchData) {
+      dispatch(setLoading(true));
+      
+      CoreAPI.get_projects()
+        .then(response => {
+         
+          if (response.status === 'success' && response.data.length > 0) {
+            dispatch(setProjects(response.data));
+          }
+          
+          dispatch(setLoading(false));
+        })
+        .catch(err => {
+          console.error('Error fetching projects:', err);
+          dispatch(setError(err.message || 'Failed to fetch projects'));
+          dispatch(setLoading(false));
+        });
     }
-  ];
+  }, [dispatch, projects.length, last_updated]);
 
   // Filter projects based on active tab and search term
   const filteredProjects = projects.filter(project => {
-    const matchesTab = activeTab === 'all' || project.status === activeTab;
-    const matchesSearch = project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         project.client.toLowerCase().includes(searchTerm.toLowerCase());
+    // Skip invalid projects
+    if (!project || typeof project !== 'object') return false;
+    
+    // Check if project matches the active tab
+    const matchesTab = activeTab === 'all' || 
+                      (project.status ? project.status === activeTab : true);
+    
+    // Check if project matches the search term
+    const matchesSearch = searchTerm === '' || (
+      (project.title ? project.title.toString().toLowerCase().includes(searchTerm.toLowerCase()) : false) ||
+      (project.client ? project.client.toString().toLowerCase().includes(searchTerm.toLowerCase()) : false)
+    );
+    
     return matchesTab && matchesSearch;
   });
 
-  // Format date for display
-  const formatDate = (dateString) => {
-    const options = { year: 'numeric', month: 'short', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString(undefined, options);
-  };
+ 
 
   // Handle delete project
   const handleDeleteClick = (project) => {
@@ -85,12 +71,29 @@ const Projects = () => {
     setShowDeleteModal(true);
   };
 
-  const confirmDelete = () => {
-    // In a real app, this would send a delete request to the server
-    console.log(`Deleting project: ${projectToDelete.id}`);
+  const confirmDelete = async () => {
+    if (projectToDelete && projectToDelete.id) {
+      dispatch(setLoading(true));
+
+      const response = await CoreAPI.delete_project(projectToDelete.id);
+      console.log(response);
+      
+      if (response.status === 'success') {
+        dispatch(removeProject({ id: projectToDelete.id }));
+        toast.success('Project deleted successfully');
+      }
+      else {
+        toast.error('Failed to delete project');
+      }
+      
+      dispatch(setLoading(false));
+    }
     setShowDeleteModal(false);
     setProjectToDelete(null);
   };
+  
+
+
 
   return (
     <div className="space-y-6">
@@ -104,7 +107,10 @@ const Projects = () => {
             </p>
           </div>
           <div className="mt-4 md:mt-0">
-            <button className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
+            <button 
+              onClick={() => navigate('/dashboard/projects/add')}
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+            >
               <FiPlus className="-ml-1 mr-2 h-5 w-5" />
               New Project
             </button>
@@ -292,11 +298,11 @@ const Projects = () => {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <div className="text-gray-500">Start Date</div>
-                      <div className="font-medium text-gray-900">{formatDate(project.startDate)}</div>
+                      <div className="font-medium text-gray-900">{project.start_date}</div>
                     </div>
                     <div>
                       <div className="text-gray-500">End Date</div>
-                      <div className="font-medium text-gray-900">{formatDate(project.endDate)}</div>
+                      <div className="font-medium text-gray-900">{project.end_date}</div>
                     </div>
                     <div>
                       <div className="text-gray-500">Budget</div>
@@ -329,9 +335,11 @@ const Projects = () => {
                 </div>
                 <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 flex justify-between">
                   <div className="flex space-x-2">
-                    <button className="inline-flex items-center px-2 py-1 border border-gray-300 text-xs leading-4 font-medium rounded-md text-gray-700 bg-gray-50 hover:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                      <FiEdit2 className="mr-1 h-3 w-3" />
-                      Edit
+                    <button 
+                      onClick={() => navigate(`/dashboard/projects/edit/${project.id}`)}
+                      className="text-blue-600 hover:text-blue-800"
+                    >
+                      <FiEdit2 className="h-5 w-5" />
                     </button>
                     <button 
                       onClick={() => handleDeleteClick(project)}
@@ -359,22 +367,43 @@ const Projects = () => {
 
           {filteredProjects.length === 0 && (
             <div className="text-center py-12">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No projects found</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                {searchTerm ? 'Try adjusting your search terms.' : 'Get started by creating a new project.'}
-              </p>
-              <div className="mt-6">
-                <button
-                  type="button"
-                  className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
-                >
-                  <FiPlus className="-ml-1 mr-2 h-5 w-5" />
-                  New Project
-                </button>
-              </div>
+              {loading ? (
+                <div className="flex justify-center items-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
+                </div>
+              ) : error ? (
+                <div className="text-center text-red-500">
+                  <p>Error loading projects: {error}</p>
+                  <button 
+                    onClick={() => dispatch(fetchProjects())}
+                    className="mt-4 inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+                  >
+                    Try Again
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">No projects found</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {searchTerm ? 'Try adjusting your search terms.' : 'Get started by creating a new project.'}
+                  </p>
+                  <div className="mt-6">
+                    <button
+                      type="button"
+                      className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+                      onClick={() => {
+                        navigate('/dashboard/projects/add');
+                      }}
+                    >
+                      <FiPlus className="-ml-1 mr-2 h-5 w-5" />
+                      New Project
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -384,11 +413,9 @@ const Projects = () => {
 
       {/* Delete confirmation modal */}
       {showDeleteModal && (
-        <div className="fixed z-10 inset-0 overflow-y-auto">
+        <div className="fixed z-50 inset-0 overflow-y-auto">
           <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
-            </div>
+    
             <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
             <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
