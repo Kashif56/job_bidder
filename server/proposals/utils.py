@@ -198,7 +198,7 @@ def humanize_proposal(proposal_text):
         prompt = f"""
         # HUMANIZE PROPOSAL
         
-        ## Original Proposal
+        ##Original Proposal
         {proposal_text}
         
         ## Instructions
@@ -210,8 +210,10 @@ def humanize_proposal(proposal_text):
         3. Vary sentence structure within each section
         4. Use contractions and conversational language where appropriate
         5. Maintain all the key points, professional quality, and EXACT SECTION STRUCTURE
+
         
         IMPORTANT RULES:
+        - DO NOT INCLUDE ORIGINAL PROPOSAL AT THE START
         - DO NOT change section headings or titles
         - DO NOT reorganize the content or change the order of sections
         - DO NOT remove or add new sections

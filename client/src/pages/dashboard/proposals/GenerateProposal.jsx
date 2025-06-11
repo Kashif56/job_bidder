@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDispatch } from "react-redux";
 import ProposalAPI from "../../../api/ProposalAPI";
-import { FiCheck, FiRefreshCw, FiChevronRight, FiLoader } from "react-icons/fi";
+import { FiCheck, FiRefreshCw, FiChevronRight, FiLoader, FiTarget, FiEdit, FiStar } from "react-icons/fi";
 import { addProposal } from "../../../redux/slices/ProposalSlice";
 
 const GenerateProposal = () => {
@@ -20,6 +20,9 @@ const GenerateProposal = () => {
   
   // Refs for scrolling
   const resultsRef = useRef(null);
+  const painPointsRef = useRef(null);
+  const proposalRef = useRef(null);
+  const humanizedRef = useRef(null);
 
   // Animation variants
   const containerVariants = {
@@ -42,6 +45,7 @@ const GenerateProposal = () => {
     }
   };
 
+  // Unique animations for each step
   const pulseAnimation = {
     scale: [1, 1.05, 1],
     opacity: [0.7, 1, 0.7],
@@ -50,9 +54,49 @@ const GenerateProposal = () => {
       duration: 1.5 
     }
   };
+  
+  const analyzeAnimation = {
+    rotate: [0, 10, -10, 10, 0],
+    scale: [1, 1.1, 1],
+    transition: {
+      repeat: Infinity,
+      duration: 2
+    }
+  };
+  
+  const painPointsAnimation = {
+    scale: [1, 1.2, 1],
+    borderRadius: ["50%", "40%", "50%"],
+    transition: {
+      repeat: Infinity,
+      duration: 2.5
+    }
+  };
+  
+  const proposalAnimation = {
+    y: [0, -5, 0],
+    x: [0, 3, 0, -3, 0],
+    transition: {
+      repeat: Infinity,
+      duration: 2
+    }
+  };
+  
+  const humanizeAnimation = {
+    scale: [1, 1.1, 1],
+    boxShadow: [
+      "0px 0px 0px rgba(79, 70, 229, 0.2)",
+      "0px 0px 15px rgba(79, 70, 229, 0.6)",
+      "0px 0px 0px rgba(79, 70, 229, 0.2)"
+    ],
+    transition: {
+      repeat: Infinity,
+      duration: 2
+    }
+  };
 
-  const scrollToResults = () => {
-    resultsRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToSection = (ref) => {
+    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const resetForm = () => {
@@ -71,6 +115,7 @@ const GenerateProposal = () => {
       return;
     }
     
+    setCurrentStep(0);
     setProcessing(true);
     setError(null);
     
@@ -92,7 +137,7 @@ const GenerateProposal = () => {
         });
         
         setCurrentStep(1);
-        scrollToResults();
+        scrollToSection(resultsRef);
       } else {
         throw new Error("Invalid response format from API");
       }
@@ -120,7 +165,8 @@ const GenerateProposal = () => {
         pain_points: painPointsResponse.analysis.pain_points || []
       };
       setPainPoints(painPointsData);
-      scrollToResults();
+      // Scroll to pain points section after a short delay to ensure it's rendered
+      setTimeout(() => scrollToSection(painPointsRef), 100);
       
       // Step 3: Generate proposal
       setCurrentStep(3);
@@ -135,7 +181,8 @@ const GenerateProposal = () => {
       );
       console.log("Proposal generation response:", proposalResult);
       setGeneratedProposal(proposalResult);
-      scrollToResults();
+      // Scroll to proposal section after a short delay to ensure it's rendered
+      setTimeout(() => scrollToSection(proposalRef), 100);
       
       // Step 4: Humanize proposal
       setCurrentStep(4);
@@ -145,6 +192,8 @@ const GenerateProposal = () => {
       );
       console.log("Humanized proposal response:", humanizedResult);
       setHumanizedProposal(humanizedResult);
+      // Scroll to humanized proposal section after a short delay to ensure it's rendered
+      setTimeout(() => scrollToSection(humanizedRef), 100);
       
       // Create a new proposal object to add to Redux store
       const newProposal = {
@@ -160,8 +209,6 @@ const GenerateProposal = () => {
       dispatch(addProposal(newProposal));
       console.log("Added proposal to Redux store:", newProposal);
       
-      scrollToResults();
-      
     } catch (err) {
       console.error("Proposal generation error:", err);
       setError(err.message || "An error occurred during proposal generation");
@@ -172,28 +219,51 @@ const GenerateProposal = () => {
 
   // Render the magic animation for the current processing step
   const renderMagicAnimation = () => {
+    // Different animations and icons for each step
+    let animationStyle, icon, gradientClass, animationText;
+    
+    if (currentStep === 0) {
+      animationStyle = analyzeAnimation;
+      icon = <FiTarget className="text-white text-2xl" />;
+      gradientClass = "from-blue-500 to-emerald-600";
+      animationText = "Analyzing job...";
+    } else if (currentStep === 1) {
+      animationStyle = painPointsAnimation;
+      icon = <FiLoader className="text-white text-2xl animate-spin" />;
+      gradientClass = "from-red-500 to-orange-500";
+      animationText = "Identifying pain points...";
+    } else if (currentStep === 2) {
+      animationStyle = proposalAnimation;
+      icon = <FiEdit className="text-white text-2xl" />;
+      gradientClass = "from-green-500 to-teal-500";
+      animationText = "Crafting your proposal...";
+    } else {
+      animationStyle = humanizeAnimation;
+      icon = <FiStar className="text-white text-2xl" />;
+      gradientClass = "from-purple-500 to-pink-500";
+      animationText = "Adding human touch to your proposal...";
+    }
+    
     return (
       <motion.div 
-        className="flex flex-col items-center justify-center py-10"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
+        className="flex flex-col items-center justify-center py-6 my-6 bg-white rounded-lg shadow-md"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        transition={{ duration: 0.5 }}
       >
         <motion.div 
-          className="w-20 h-20 rounded-full bg-gradient-to-r from-purple-500 to-indigo-600 flex items-center justify-center"
-          animate={pulseAnimation}
+          className={`w-20 h-20 rounded-full bg-gradient-to-r ${gradientClass} flex items-center justify-center`}
+          animate={animationStyle}
         >
-          <FiLoader className="text-white text-2xl animate-spin" />
+          {icon}
         </motion.div>
         <motion.p 
           className="mt-4 text-lg text-gray-700 font-medium"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1, transition: { delay: 0.3 } }}
         >
-          {currentStep === 1 ? "Analyzing job match..." :
-           currentStep === 2 ? "Identifying pain points..." :
-           currentStep === 3 ? "Crafting your proposal..." :
-           "Adding human touch to your proposal..."}
+          {animationText}
         </motion.p>
       </motion.div>
     );
@@ -285,7 +355,7 @@ const GenerateProposal = () => {
           <button
             onClick={handleContinue}
             disabled={processing}
-            className="flex items-center px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+            className="flex items-center px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 cursor-pointer"
           >
             Continue <FiChevronRight className="ml-2" />
           </button>
@@ -375,18 +445,12 @@ const GenerateProposal = () => {
           </div>
         </div>
         
-        <div className="mt-6 flex justify-between">
+        <div className="mt-6 flex justify-end ">
           <button
             onClick={resetForm}
-            className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
           >
             New Proposal <FiRefreshCw className="ml-2 inline" />
-          </button>
-          
-          <button
-            className="flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            Save Proposal <FiCheck className="ml-2" />
           </button>
         </div>
       </motion.div>
@@ -406,7 +470,7 @@ const GenerateProposal = () => {
           Job Description
         </label>
         <textarea
-          className="w-full h-40 p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          className="w-full h-40 p-3 border border-gray-300 outline-none rounded-md focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
           placeholder="Paste the job description here..."
           value={jobDescription}
           onChange={(e) => setJobDescription(e.target.value)}
@@ -421,12 +485,12 @@ const GenerateProposal = () => {
           <button
             onClick={handleAnalyzeMatch}
             disabled={processing || !jobDescription.trim() || currentStep > 0}
-            className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+            className="px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 cursor-pointer"
           >
             {processing && currentStep === 0 ? (
               <>Analyzing... <FiLoader className="ml-2 animate-spin inline" /></>
             ) : (
-              "Check Match Analysis"
+              "Job Match Analysis"
             )}
           </button>
         </div>
@@ -434,28 +498,50 @@ const GenerateProposal = () => {
       
       {/* Results section */}
       <div ref={resultsRef}>
-        <AnimatePresence>
-          {processing && (
-            renderMagicAnimation()
-          )}
-        </AnimatePresence>
-        
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="visible"
         >
           {/* Step 1: Match Analysis */}
-          {currentStep >= 1 && !processing && renderMatchAnalysis()}
+          {currentStep === 0 && processing && (
+            <AnimatePresence>
+              {renderMagicAnimation()}
+            </AnimatePresence>
+          )}
+          <div ref={resultsRef}>
+            {currentStep >= 1 && renderMatchAnalysis()}
+          </div>
           
-          {/* Step 2: Pain Points */}
-          {currentStep >= 2 && !processing && renderPainPoints()}
+          {/* Step 2: Pain Points Animation & Content */}
+          {currentStep >= 1 && currentStep < 2 && processing && (
+            <AnimatePresence>
+              {renderMagicAnimation()}
+            </AnimatePresence>
+          )}
+          <div ref={painPointsRef}>
+            {currentStep >= 2 && renderPainPoints()}
+          </div>
           
-          {/* Step 3: Generated Proposal */}
-          {currentStep >= 3 && !processing && renderGeneratedProposal()}
+          {/* Step 3: Generated Proposal Animation & Content */}
+          {currentStep >= 2 && currentStep < 3 && processing && (
+            <AnimatePresence>
+              {renderMagicAnimation()}
+            </AnimatePresence>
+          )}
+          <div ref={proposalRef}>
+            {currentStep >= 3 && renderGeneratedProposal()}
+          </div>
           
-          {/* Step 4: Humanized Proposal */}
-          {currentStep >= 4 && !processing && renderHumanizedProposal()}
+          {/* Step 4: Humanized Proposal Animation & Content */}
+          {currentStep === 3 && processing && (
+            <AnimatePresence>
+              {renderMagicAnimation()}
+            </AnimatePresence>
+          )}
+          <div ref={humanizedRef}>
+            {currentStep >= 4 && renderHumanizedProposal()}
+          </div>
         </motion.div>
       </div>
     </div>
