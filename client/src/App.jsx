@@ -23,6 +23,7 @@ import FreelanceProfile from './pages/dashboard/FreelanceProfile';
 import Projects from './pages/dashboard/Projects';
 import AddProject from './pages/dashboard/projects/AddProject';
 import EditProject from './pages/dashboard/projects/EditProject';
+import ViewProject from './pages/dashboard/projects/ViewProject';
 
 // Proposal Pages
 import GenerateProposal from './pages/dashboard/proposals/GenerateProposal';
@@ -60,6 +61,7 @@ function App() {
             <Route path="projects" element={<Projects />} />
             <Route path="projects/add" element={<AddProject />} />
             <Route path="projects/edit/:projectId" element={<EditProject />} />
+            <Route path="projects/view/:projectId" element={<ViewProject />} />
             <Route path="proposals">
               <Route index element={<Navigate to="/dashboard/proposals/all" replace />} />
               <Route path="generate" element={<GenerateProposal />} />

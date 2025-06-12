@@ -120,7 +120,7 @@ const Projects = () => {
 
 
       {/* Project stats */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         <motion.div
           className="bg-white rounded-lg p-6 border border-gray-200"
           initial={{ opacity: 0, y: 20 }}
@@ -188,26 +188,7 @@ const Projects = () => {
           </div>
         </motion.div>
 
-        <motion.div
-          className="bg-white rounded-lg p-6 border border-gray-200"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.4 }}
-        >
-          <div className="flex items-center">
-            <div className="flex-shrink-0 p-3 rounded-md bg-emerald-100 text-emerald-600">
-              <FiDollarSign className="h-6 w-6" />
-            </div>
-            <div className="ml-5 w-0 flex-1">
-              <dl>
-                <dt className="text-sm font-medium text-gray-500 truncate">Total Revenue</dt>
-                <dd className="flex items-baseline">
-                  <div className="text-2xl font-semibold text-gray-900">$17,500</div>
-                </dd>
-              </dl>
-            </div>
-          </div>
-        </motion.div>
+
       </div>
 
       {/* Tabs and search */}
@@ -334,18 +315,26 @@ const Projects = () => {
                   </div>
                 </div>
                 <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 flex justify-between">
-                  <div className="flex space-x-2">
-                    <button 
-                      onClick={() => navigate(`/dashboard/projects/edit/${project.id}`)}
-                      className="text-blue-600 hover:text-blue-800"
+                  <div className="flex space-x-2 mt-4">
+                    <button
+                      onClick={() => navigate(`/dashboard/projects/view/${project.id}`)}
+                      className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
                     >
-                      <FiEdit2 className="h-5 w-5" />
+                      <FiExternalLink className="mr-1" />
+                      View
                     </button>
-                    <button 
-                      onClick={() => handleDeleteClick(project)}
-                      className="inline-flex items-center px-2 py-1 border border-gray-300 text-xs leading-4 font-medium rounded-md text-red-700 bg-gray-50 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500"
+                    <button
+                      onClick={() => navigate(`/dashboard/projects/edit/${project.id}`)}
+                      className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
                     >
-                      <FiTrash2 className="mr-1 h-3 w-3" />
+                      <FiEdit2 className="mr-1" />
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteClick(project)}
+                      className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                    >
+                      <FiTrash2 className="mr-1" />
                       Delete
                     </button>
                   </div>

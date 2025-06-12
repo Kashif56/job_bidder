@@ -121,7 +121,7 @@ const AllProposals = () => {
   // Get color for status badge
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
-      case 'sent':
+      case 'submitted':
         return 'bg-blue-100 text-blue-800';
       case 'accepted':
         return 'bg-green-100 text-green-800';
@@ -384,7 +384,7 @@ const AllProposals = () => {
                  
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(proposal.status)}`}>
-                          {proposal.style?.toUpperCase() || 'Generated'}
+                          {proposal.status?.toUpperCase() || 'Generated'}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">

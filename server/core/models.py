@@ -39,6 +39,7 @@ class Projects(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     title = models.CharField(max_length=200)
     description = models.TextField(max_length=1000)
+    summary = models.TextField(max_length=1000)
     budget = models.IntegerField()
     platform = models.CharField(max_length=20, choices=PLATFORM_CHOICES)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES)

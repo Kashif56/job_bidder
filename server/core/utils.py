@@ -104,3 +104,26 @@ def extract_profile_details(text):
             "projects": [],
             "social_links": []
         }
+
+
+
+def summarize_project_description(description):
+    try:
+        prompt = """
+        You are a helpful assistant that can summarize a project description in 50 words or less.
+        """
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": prompt},
+                {"role": "user", "content": description}
+            ]
+        )
+
+        
+        return response.choices[0].message.content
+        
+    except Exception as e:
+        print(f"Error in summarize_project_description: {e}")
+        # Return a default structure in case of error
+        return ''

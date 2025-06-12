@@ -6,7 +6,7 @@ from rest_framework import status
 from django.db import transaction
 from .serializer import ProjectsSerializer, ExperienceSerializer, FreelancerProfileSerializer
 from .models import Projects, FreelancerProfile, Experience
-from .utils import extract_profile_details
+from .utils import extract_profile_details, summarize_project_description
 
 import json
 
@@ -247,10 +247,12 @@ def update_freelancer_profile(request):
 def create_project(request):
     try:
         data = request.data
+        summary = summarize_project_description(data['description'])
         project = Projects.objects.create(
             user=request.user,
             title=data['title'],
             description=data['description'],
+            summary=summary,
             budget=data.get('budget', 0),
             platform=data['platform'],
             status=data['status'],
@@ -290,6 +292,30 @@ def get_projects(request):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_project(request, project_id):
+    try:
+        project = Projects.objects.get(id=project_id, user=request.user)
+        serializer = ProjectsSerializer(project)
+        return Response({
+            'status': 'success',
+            'data': serializer.data
+        }, status=status.HTTP_200_OK)
+        
+    except Projects.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': 'Project not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        print(f"Error in get_project: {str(e)}")
+        return Response({
+            'status': 'error',
+            'message': f'An error occurred: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def update_project(request, project_id):
@@ -298,6 +324,7 @@ def update_project(request, project_id):
         data = request.data
         project.title = data.get('title', project.title)
         project.description = data.get('description', project.description)
+        project.summary = summarize_project_description(data.get('description', project.description))
         project.budget = data.get('budget', project.budget)
         project.platform = data.get('platform', project.platform)
         project.status = data.get('status', project.status)
